@@ -9,7 +9,7 @@
 
 #get id for the Pasphrase policy
 PASS_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN " \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 | jq -rc '._embedded.passwordPolicies[] | select(.name=="Basic") | .id')
 
 #set default active password policy to Basic
