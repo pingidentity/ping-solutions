@@ -5,21 +5,28 @@
 #Variables needed to be passed for this script:
 # API_LOCATION
 # ENV_ID
-# WORKER_APP_ACCESS_TOKEN
+# CLIENT_ID
+# CLIENT_SECRET
 
-#get id for the Pasphrase policy
+WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
+--location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
+--header "Content-Type: application/x-www-form-urlencoded" \
+--data-raw 'grant_type=client_credentials' \
+| jq -r '.access_token')
+
+#get id for the Basic policy
 PASS_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 | jq -rc '._embedded.passwordPolicies[] | select(.name=="Basic") | .id')
 
-#set default active password policy to Basic
-curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/passwordPolicies/$PASS_POL_ID" \
+#set default active password policy to Passphrase
+PASS_POL_SET=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/passwordPolicies/$PASS_POL_ID" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN " \
 --header 'Content-Type: application/json' \
 --data-raw '{
-"id" : "4e58ed0c-ab50-4515-82d8-79c4d6fe8069",
+  "id" : "'"$PASS_POL_ID"'",
       "environment" : {
-        "id" : "d610dc18-600b-46bd-a4cb-27a6c5d37b85"
+        "id" : "'"$ENV_ID"'"
       },
       "name" : "Basic",
       "description" : "A relaxed standard policy to allow for maximum customer flexibility.",
@@ -41,4 +48,17 @@ curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/passwordPolici
         "abcdefghijklmnopqrstuvwxyz" : 1
       },
       "default" : true
-}'
+}')
+
+#validation
+PASS_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+| jq -rc '._embedded.passwordPolicies[] | select(.name=="Basic") | .default')
+
+#verify set true
+if [ "$PASS_POL_STATUS" = true ]; then
+  echo "Passphrase policy set successfully"
+else
+  echo "Passphrase policy not set successfully"
+  exit 1
+fi
