@@ -29,15 +29,18 @@ PING_IDENTITY_DEVOPS_TAG=${PING_IDENTITY_DEVOPS_TAG:-latest}
 DEVOPS
 
 echo "Performing base PingOne configuration"
+echo "Performing PingOne configuration revertion"
+echo "Environment ID is $ENV_ID"
+echo "API URL path is $API_LOCATIONS"
 
 #performing initial PingOne creation scripts
-for script in ../Solutions/WF/$CURRENT_PIPELINE_VERSION/PingOne/*create.sh; do
+for script in ./Solutions/WF/$CURRENT_PIPELINE_VERSION/PingOne/*create.sh; do
   echo "Executing $script..."
   bash $script 
 done
 
 #performing initial PingOne set scripts
-for script in ../Solutions/WF/$CURRENT_PIPELINE_VERSION/PingOne/*set.sh; do
+for script in ./Solutions/WF/$CURRENT_PIPELINE_VERSION/PingOne/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done
