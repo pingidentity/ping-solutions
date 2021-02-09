@@ -7,7 +7,7 @@ workflow:
 
 stages:
   - 00-configure-solution
-  - 01--configured-test-solution
+  - 01-configured-test-solution
   - 02-revert-solution
 
 default:
