@@ -55,7 +55,7 @@ done
 EMP_USERS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select (.name=="Sample Employee Population") | .userCount')
 
-if [ -z $EMP_USERS ]; then
+if (( $EMP_USERS == 0 )) || [ -z $EMP_USERS ]; then
     echo "All sample employees removed..."
 else
     echo "Not all sample employee users were removed..."
@@ -68,7 +68,7 @@ CON_USER_EXP_COUNT=0
 CON_USERS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select (.name=="Sample Contractor Population") | .userCount')
 
-if [ -z $CON_USERS ]; then
+if (( $CON_USERS == $CON_USER_EXP_COUNT )) || [ -z $CON_USERS ]; then
     echo "All sample contractors removed..."
 else
     echo "Not all sample contractor users were removed..."
@@ -76,11 +76,11 @@ else
 fi
 
 # get employee population ID
-EMP_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Sample Employee Population") | .id')
-
 DELETE_EMP_POP=$(curl -s --location --request DELETE "$API_LOCATION/environments/$ENV_ID/populations/$EMP_POP" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
+
+EMP_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Sample Employee Population") | .id')
 
 if [ -z $EMP_POP ]; then
     echo "Sample Employee Population removed..."
@@ -90,11 +90,11 @@ else
 fi
 
 # get contractor population ID
-CON_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Sample Contractor Population") | .id')
-
 DELETE_CON_POP=$(curl -s --location --request DELETE "$API_LOCATION/environments/$ENV_ID/populations/$CON_POP" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
+
+CON_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Sample Contractor Population") | .id')
 
 if [ -z $CON_POP ]; then
     echo "Sample Contractor Population removed..."
