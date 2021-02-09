@@ -1,5 +1,11 @@
 #!/bin/bash
+
 # revert PingOne Workforce Risk Policy to use Default naming
+
+#Variables needed to be passed for this script:
+# API_LOCATION
+# ENV_ID
+# WORKER_APP_ACCESS_TOKEN
 
 # Get Current Default Risk Policy
 RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
