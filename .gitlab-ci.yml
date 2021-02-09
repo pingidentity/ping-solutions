@@ -6,9 +6,9 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 stages:
-  - 00-configure-solution
+  - 00-to-the-moon
   - 01-configured-test-solution
-  - 02-revert-solution
+  - 02-spin-that-car-around
   - 03-reverted-test-solution
 
 default:
@@ -28,7 +28,7 @@ variables:
   KUBERNETES_POLL_TIMEOUT: 600
 
 configure-solution:
-    stage: 00-configure-solution
+    stage: 00-to-the-moon
     script:
       - "./.gitlab-ci/00-configure-solution.sh"
 
@@ -38,7 +38,7 @@ configured-test-solution:
       - "./.gitlab-ci/01-configured-test-solution.sh"
 
 revert-solution:
-  stage: 02-revert-solution
+  stage: 02-spin-that-car-around
   when: always
   script:
     - "./.gitlab-ci/02-revert-solution.sh"
