@@ -15,7 +15,8 @@ WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
 | jq -r '.access_token')
 
 #get id for the Passphrase policy
-PASS_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
+PASS_POL_ID=$(curl --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
+--header 'content-type: application/x-www-form-urlencoded' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 | jq -rc '._embedded.passwordPolicies[] | select(.name=="Passphrase") | .id')
 
@@ -49,6 +50,7 @@ PASS_POL_SET=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID
 
 #validation
 PASS_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
+--header 'content-type: application/x-www-form-urlencoded' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 | jq -rc '._embedded.passwordPolicies[] | select(.name=="Passphrase") | .default')
 
