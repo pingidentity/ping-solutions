@@ -46,4 +46,4 @@ revert-solution:
 reverted-test-solution:
   stage: 03-reverted-test-solution
   script:
-    - "./gitlab-ci/03-reverted-test-solution.sh"
+    - "./.gitlab-ci/03-reverted-test-solution.sh"
