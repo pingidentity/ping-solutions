@@ -28,8 +28,10 @@ PING_IDENTITY_DEVOPS_REGISTRY=${PING_IDENTITY_DEVOPS_REGISTRY:-docker.io/pingide
 PING_IDENTITY_DEVOPS_TAG=${PING_IDENTITY_DEVOPS_TAG:-latest}
 DEVOPS
 
+
+echo "Worker token is $WORKER_APP_ACCESS_TOKEN"
+
 echo "Performing base PingOne configuration"
-echo "Performing PingOne configuration revertion"
 echo "Environment ID is $ENV_ID"
 echo "API URL path is $API_LOCATIONS"
 echo "Current pipeline version is $CURRENT_PIPELINE_VERSION"
