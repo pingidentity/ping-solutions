@@ -7,7 +7,7 @@ workflow:
 
 stages:
   - 00-configure-solution
-  - 01-test-solution
+  - 01--configured-test-solution
   - 02-revert-solution
 
 default:
@@ -31,13 +31,18 @@ configure-solution:
     script:
       - "./.gitlab-ci/00-configure-solution.sh"
 
-test-solution:
-    stage: 01-test-solution
+configured-test-solution:
+    stage: 01-configured-test-solution
     script:
-      - "./.gitlab-ci/01-test-solution.sh"
+      - "./.gitlab-ci/01-configured-test-solution.sh"
 
 revert-solution:
   stage: 02-revert-solution
   when: always
   script:
     - "./.gitlab-ci/02-revert-solution.sh"
+
+reverted-test-solution:
+  stage: 03-reverted-test-solution
+  script:
+    - "./gitlab-ci/03-reverted-test-solution.sh"

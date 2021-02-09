@@ -55,7 +55,7 @@ done
 EMP_USERS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select (.name=="Sample Employee Population") | .userCount')
 
-if (( $EMP_USERS == 0 )) || [ -z $EMP_USERS ]; then
+if [ -z $EMP_USERS ] || (( $EMP_USERS == 0 )); then
     echo "All sample employees removed..."
 else
     echo "Not all sample employee users were removed..."
@@ -68,7 +68,7 @@ CON_USER_EXP_COUNT=0
 CON_USERS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select (.name=="Sample Contractor Population") | .userCount')
 
-if (( $CON_USERS == $CON_USER_EXP_COUNT )) || [ -z $CON_USERS ]; then
+if [ -z $CON_USERS ] || (( $CON_USERS == $CON_USER_EXP_COUNT )); then
     echo "All sample contractors removed..."
 else
     echo "Not all sample contractor users were removed..."
