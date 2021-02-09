@@ -9,6 +9,7 @@ stages:
   - 00-configure-solution
   - 01-configured-test-solution
   - 02-revert-solution
+  - 03-reverted-test-solution
 
 default:
   image: "pingdevops.com/ci-utils/docker-builds-runner:edb6f37cedb342138aca215a69474e679b55390d5150ce8400eac264f2a864ae"
