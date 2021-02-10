@@ -10,6 +10,12 @@ awk -v env="$ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD" \
 ./.gitlab-ci/cypress.d/integration/tests/reverted_state_check.js 
 
 
-docker run -it --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
+DOCKER_RUN_OPTIONS="-i --rm"
+# Only allocate tty if we detect one
+if [ -t 0 ] && [ -t 1 ]; then
+    DOCKER_RUN_OPTIONS="$DOCKER_RUN_OPTIONS -t"
+fi
+
+docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
 
 rm ./.gitlab-ci/cypress.d/integration/tests/reverted_state_check.js 
