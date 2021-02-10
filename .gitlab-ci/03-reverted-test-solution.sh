@@ -9,8 +9,8 @@ awk -v env="$ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD" \
 '{sub(eid,env)} {sub(tu,cu)} {sub(tp,cp)}1' >\
 ./.gitlab-ci/cypress/cypress.d/integration/tests/reverted_state_check.js 
 
-
-awk -v pid=PID -v setpid="$CYPRESS_PROJECT_ID" '{sub(pid,setpid)}' ./.gitlab-ci/cypress/cypress.json
+cat ./.gitlab-ci/cypress.d/cypress.json.base | \
+awk -v pid=PID -v setpid="$CYPRESS_PROJECT_ID" '{sub(pid,setpid)}1' > ./.gitlab-ci/cypress.d/cypress.json
 
 DOCKER_RUN_OPTIONS="-i --rm"
 # Only allocate tty if we detect one
@@ -20,4 +20,4 @@ fi
 
 docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
 
-rm ./.gitlab-ci/cypress.d/integration/tests/reverted_state_check.js 
+rm ./.gitlab-ci/cypress/cypress.d/integration/tests/reverted_state_check.js 
