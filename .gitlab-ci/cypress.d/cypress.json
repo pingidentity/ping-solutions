@@ -1,0 +1,6 @@
+{
+  "projectId": "PID",
+  "pageLoadTimeout": 90000,
+  "defaultCommandTimeout": 30000,
+  "chromeWebSecurity": false
+}

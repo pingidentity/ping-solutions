@@ -3,12 +3,14 @@
 
 echo "Performing tests on reverted state"
 echo "Performing Workforce validation"
-cat ./.gitlab-ci/cypress.d/integration/tests/reverted_state_check.base | \
+cat ./.gitlab-ci/cypress/cypress.d/integration/tests/reverted_state_check.base | \
 awk -v env="$ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD" \
 -v eid="ENV_ID" -v tu="TEST_USERNAME" -v tp="TEST_PASSWORD" \
 '{sub(eid,env)} {sub(tu,cu)} {sub(tp,cp)}1' >\
-./.gitlab-ci/cypress.d/integration/tests/reverted_state_check.js 
+./.gitlab-ci/cypress/cypress.d/integration/tests/reverted_state_check.js 
 
+
+awk -v pid=PID -v setpid="$CYPRESS_PROJECT_ID" '{sub(pid,setpid)}' ./.gitlab-ci/cypress/cypress.json
 
 DOCKER_RUN_OPTIONS="-i --rm"
 # Only allocate tty if we detect one
