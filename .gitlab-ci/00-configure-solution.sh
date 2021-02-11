@@ -30,16 +30,45 @@ DEVOPS
 
 #WORKFORCEEEEEEEEEEE
 
-#check version to perform tests against for WF
-if [ -z $CURRENT_WF_VERSION ]; then
-    export CURRENT_WF_VERSION=$(ls -v ./Solutions/WF/ | tail -n 1)
+#setup the env name
+export ENV_NAME=$( date +"RUNNER_ENV_"%Y%m%d )
+
+echo "Performing variable substitution"
+#let's set this bad boy up!
+#note: the ENV_ID up here is the master/admin ENV_ID for an environment, not the new. I'm going to forget about this.
+echo "Setting up P14C environment"
+cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | 
+awk -v env="$ADMIN_ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD" -v ename="$ENV_NAME" \
+-v eid="ENV_ID" -v tu="TEST_USERNAME" -v tp="TEST_PASSWORD" -v oename="ENV_NM" \
+'{sub(eid,env)} {sub(tu,cu)} {sub(oename,ename)} {sub(tp,cp)}1' > \
+./.gitlab-ci/cypress.d/cypress/integration/tests/create_env.js 
+
+cat ./.gitlab-ci/cypress.d/cypress/base_files/create_worker_app.base | \
+awk -v env="$ADMIN_ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD" -v ename="$ENV_NAME" \
+-v eid="ENV_ID" -v tu="TEST_USERNAME" -v tp="TEST_PASSWORD" -v oename="ENV_NM" \
+'{sub(eid,env)} {sub(tu,cu)} {sub(oename,ename)} {sub(tp,cp)}1' > \
+./.gitlab-ci/cypress.d/cypress/integration/tests/create_worker_app.js 
+
+cat ./.gitlab-ci/cypress.d/cypress/base_files/cypress.json.base | \
+awk -v pid=PID -v setpid="$CYPRESS_PROJECT_ID" '{sub(pid,setpid)}1' > ./.gitlab-ci/cypress.d/cypress.json
+
+DOCKER_RUN_OPTIONS="-i --rm"
+# Only allocate tty if we detect one
+if [ -t 0 ] && [ -t 1 ]; then
+    DOCKER_RUN_OPTIONS="$DOCKER_RUN_OPTIONS -t"
 fi
-echo "Current WF version is $CURRENT_WF_VERSION"
+
+echo "Launching Docker to set up environment"
+
+docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
+
+rm ./.gitlab-ci/cypress.d/cypress/integration/tests/create*.js 
 
 #set Ping One variables for WF
-export CLIENT_ID=$WF_CLIENT_ID
-export CLIENT_SECRET=$WF_CLIENT_SECRET
-export ENV_ID=$WF_ENV_ID
+#this is 
+export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/client_id.txt)
+export CLIENT_SECRET=$(cat ./.gitlab-ci/cypress.d/client_secret.txt)
+export ENV_ID=$(cat ./.gitlab-ci/cypress.d/envid.txt)
 
 
 #get a worker app token to run our tests (WF)
@@ -57,14 +86,14 @@ echo "WF worker token is $WORKER_APP_ACCESS_TOKEN"
 
 #performing initial PingOne WF creation scripts
 echo "Running WF creation scripts ....       ..   .. .  ."
-for script in ./Solutions/WF/$CURRENT_WF_VERSION/PingOne/*create.sh; do
+for script in ./Solutions/WF/PingOne/*create.sh; do
   echo "Executing $script..."
   bash $script 
 done
 
 #performing initial PingOne WF set scripts
 echo "Running WF set scripts . . . .   .   . _ . .   . _ _ .   _ _   ."
-for script in ./Solutions/WF/$CURRENT_WF_VERSION/PingOne/*set.sh; do
+for script in ./Solutions/WF/PingOne/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done
@@ -89,22 +118,17 @@ echo "API URL path is $API_LOCATION"
 echo "Current Org ID is $ORG_ID"
 echo "CIAM worker token is $WORKER_APP_ACCESS_TOKEN"
 
-#check version to perform tests against for CIAM
-if [ -z $CURRENT_CIAM_VERSION ]; then
-    export CURRENT_CIAM_VERSION=$(ls -v ./Solutions/CIAM/ | tail -n 1)
-fi
-echo "Current CIAM version is $CURRENT_CIAM_VERSION"
 
 #performing initial PingOne CIAM creation scripts
 echo "Running CIAM creation scripts . . . . . . . . . ."
-for script in ./Solutions/CIAM/$CURRENT_CIAM_VERSION/PingOne/*create.sh; do
+for script in ./Solutions/CIAM/PingOne/*create.sh; do
   echo "Executing $script..."
   bash $script 
 done
 
 echo "Running CIAM set scripts . !"
 #performing initial PingOne CIAM set scripts
-for script in ./Solutions/CIAM/$CURRENT_CIAM_VERSION/PingOne/*set.sh; do
+for script in ./Solutions/CIAM/PingOne/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done

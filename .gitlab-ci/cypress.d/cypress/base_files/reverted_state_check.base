@@ -5,19 +5,27 @@ Cypress.on('uncaught:exception', (err, runnable) => {
     return false
 })
 
+Cypress.Commands.add('getIframeBody', () => {
+  // get the iframe > document > body
+  // and retry until the body element is not empty
+  return cy
+  .get('iframe[data-id="content-iframe"]')
+  .its('0.contentDocument.body').should('not.be.empty')
+  // wraps "body" DOM element to allow
+  // chaining more Cypress commands, like ".find(...)"
+  // https://on.cypress.io/wrap
+  .then(cy.wrap)
+})
+
 
 describe('Check password policy set', () => {
     it('Visits PingOne Console', () => {
       cy.visit('https://console.pingone.com/?env=ENV_ID');
-      //hide the new user guide, I don't wanna figure out clicking it.
-      window.localStorage.setItem('ping-hideCompassGuide-c9513744-cf13-451f-b6e2-fa8e8e1e589','true')
-      window.localStorage.setItem('ping-hideCompassGuide-NavGuide-d8bc4e1c-812e-46d7-a5ec-c162d21661d8','true')
       //login
       cy.get('#username').type('TEST_USERNAME');
       cy.get('#password').type('TEST_PASSWORD');
       cy.get('.button').click();
-      //ensure we made it
-      cy.url({ timeout: 100000 }).should('contain', '/overviewDashboard')
+      cy.get('[data-id="guide-close-button"]').click();
       //switch to WF environment
       cy.get('.astro-environment-selector__trigger').click();
       cy.get('.astro-environment-selector__environment').contains('WF').click();

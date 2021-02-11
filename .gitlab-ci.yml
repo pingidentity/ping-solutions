@@ -10,6 +10,7 @@ stages:
   - 01-configured-test-solution
   - 02-spin-that-car-around
   - 03-reverted-test-solution
+  - 04-back-from-the-moon
 
 default:
   image: "pingdevops.com/ci-utils/docker-builds-runner:edb6f37cedb342138aca215a69474e679b55390d5150ce8400eac264f2a864ae"
@@ -47,3 +48,8 @@ reverted-test-solution:
   stage: 03-reverted-test-solution
   script:
     - "./.gitlab-ci/03-reverted-test-solution.sh"
+
+env-cleanup:
+  stage: 04-back-from-the-moon
+  script:
+    - "./.gitlab-ci/04-cleanup.sh"
