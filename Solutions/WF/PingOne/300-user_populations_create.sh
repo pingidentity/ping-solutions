@@ -8,13 +8,6 @@
 # CLIENT_ID=
 # CLIENT_SECRET=
 
-# get access token
-WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
---location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
---header "Content-Type: application/x-www-form-urlencoded" \
---data-raw 'grant_type=client_credentials' \
-| jq -r '.access_token')
-
 # create sample employee population
 POP1_CREATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/populations" \
 --header 'content-type: application/json' \
@@ -248,7 +241,7 @@ fi
 
 # Validate
 # get users in contractor population
-CON_USER_EXP_COUNT="5"
+CON_USER_EXP_COUNT=5
 CON_USERS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select (.name=="Sample Contractor Population") | .userCount')
 
