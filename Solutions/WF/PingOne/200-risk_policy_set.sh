@@ -7,12 +7,6 @@
 # CLIENT_ID
 # CLIENT_SECRET
 
-WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
---location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
---header "Content-Type: application/x-www-form-urlencoded" \
---data-raw 'grant_type=client_credentials' \
-| jq -r '.access_token')
-
 # Get Current Default Risk Policy
 RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -r ._embedded.riskPolicySets[0].id)
