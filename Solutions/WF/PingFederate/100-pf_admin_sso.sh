@@ -9,19 +9,6 @@
 # PINGFED_BASE_URL
 # DOMAIN
 
-API_LOCATION="https://api.pingone.com/v1"
-ENV_ID="df43976d-9c35-4080-81d1-570ef5563007"
-CLIENT_ID="94b0fa73-812d-439a-ac5d-ebd4467cade4"
-CLIENT_SECRET="4rpPVdx5VRiaCw7giGIumNq~iuy-APeQDD5qswbM~aSHpYnoGmCMIYtqAj5ivL_L"
-PINGFED_BASE_URL="https://example.com"
-DOMAIN="example.com"
-
-WORKER_APP_ACCESS_TOKEN=$(curl -s -u $CLIENT_ID:$CLIENT_SECRET \
---location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
---header "Content-Type: application/x-www-form-urlencoded" \
---data-raw 'grant_type=client_credentials' \
-| jq -r '.access_token')
-
 # get schema ID needed for creating attribute
 USER_SCHEMA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.schemas[].id'
