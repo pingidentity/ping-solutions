@@ -189,7 +189,7 @@ else
     echo "PingFederate Admin environment admin role created..."
 fi
 
-export values into oidc properties tmp file
+# export values into oidc properties tmp file
 OIDC_APP_OAUTH_CONTENT=$(curl -s --location --request GET "https://auth.pingone.com/$ENV_ID/as/.well-known/openid-configuration")
 
 APP_CLIENT_ID="$WEB_OIDC_APP_ID"
