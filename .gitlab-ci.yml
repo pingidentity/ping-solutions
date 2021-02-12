@@ -7,10 +7,8 @@ workflow:
 
 stages:
   - 00-to-the-moon
-  - 01-configured-test-solution
-  - 02-spin-that-car-around
-  - 03-reverted-test-solution
-  - 04-back-from-the-moon
+  - 01-spin-that-car-around
+  - 02-back-from-the-moon
 
 default:
   image: "pingdevops.com/ci-utils/docker-builds-runner:edb6f37cedb342138aca215a69474e679b55390d5150ce8400eac264f2a864ae"
@@ -36,27 +34,29 @@ configure-solution:
       paths:
         - "./.gitlab-ci/cypress.d/"
 
-configure-solution:
-    stage: 01-configured-test-solution
+test-configured-solution:
+    stage: 00-to-the-moon
     script:
       - "./.gitlab-ci/01-configured-test-solution.sh"
+    dependencies:
+      - configure-solution
 
 revert-solution:
-  stage: 02-spin-that-car-around
+  stage: 01-spin-that-car-around
   script:
     - "./.gitlab-ci/02-revert-solution.sh"
   dependencies:
     - configure-solution
 
-reverted-solution:
-  stage: 03-reverted-test-solution
+test-reverted-solution:
+  stage: 01-spin-that-car-around
   script:
     - "./.gitlab-ci/03-reverted-test-solution.sh"
   dependencies:
     - configure-solution
 
 env-cleanup:
-  stage: 04-back-from-the-moon
+  stage: 02-back-from-the-moon
   when: always
   script:
     - "./.gitlab-ci/04-cleanup.sh"
