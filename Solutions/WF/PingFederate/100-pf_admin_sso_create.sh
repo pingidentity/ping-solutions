@@ -8,7 +8,7 @@
 # WORKER_APP_ACCESS_TOKEN
 # PINGFED_BASE_URL
 # DOMAIN
-# ENV_NAME
+# ENV_NAME => this needs to be the Name of the desired environment
 
 # get schema ID needed for creating attribute
 USER_SCHEMA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas" \
@@ -125,9 +125,31 @@ else
     echo "PingFederate Admin SSO App custom attribute created..."
 fi
 
-# get current administrators Population
-ADMIN_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="'"$ENV_NAME"'") | .id')
+# check, create, or set administrator population
+ADMIN_POP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
+
+if [ "$ADMIN_POP_NAME" != "Administrators Population"]; then
+    # create sample employee population
+    CREATE_ADMIN_POP=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/populations" \
+    --header 'content-type: application/json' \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+    --data-raw '{
+      "name" : "Administrators Population",
+      "description" : "Administrators Population"
+    }')
+
+    ADMIN_POP_NAME_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
+    if [ "$ADMIN_POP_NAME_AGAIN" != "Administrators Population"]; then
+        echo "Administrators Population was not successfully created..."
+        exit 1
+    fi
+fi
+
+
+ADMIN_POP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .id')
 
 # create PingFederate admin SSO Account
 CREATE_ADMIN_ACCOUNT=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/users" \
@@ -144,7 +166,7 @@ CREATE_ADMIN_ACCOUNT=$(curl -s --location --request POST "$API_LOCATION/environm
     },
     "pf-admin-roles": "fullAdmin",
     "population": {
-        "id": "'"$ADMIN_POP"'"
+        "id": "'"$ADMIN_POP_ID"'"
     },
     "username": "PingFederateAdmin",
     "password": {
