@@ -8,6 +8,7 @@
 # WORKER_APP_ACCESS_TOKEN
 # PINGFED_BASE_URL
 # DOMAIN
+# ENV_NAME
 
 # get schema ID needed for creating attribute
 USER_SCHEMA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas" \
@@ -126,7 +127,7 @@ fi
 
 # get current administrators Population
 ADMIN_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .id')
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="'"$ENV_NAME"'") | .id')
 
 # create PingFederate admin SSO Account
 CREATE_ADMIN_ACCOUNT=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/users" \
