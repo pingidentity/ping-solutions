@@ -29,20 +29,28 @@ variables:
   KUBERNETES_POLL_TIMEOUT: 600
 
 configure-solution:
-  stage: 00-to-the-moon
-  script:
-    - "./.gitlab-ci/00-configure-solution.sh"
-  stage: 01-configured-test-solution
-  script:
-    - "./.gitlab-ci/01-configured-test-solution.sh"
-  artifacts:
-    paths:
-      - "./.gitlab-ci/cypress.d/"
+    stage: 00-to-the-moon
+    script:
+      - "./.gitlab-ci/00-configure-solution.sh"
+    artifacts:
+      paths:
+        - "./.gitlab-ci/cypress.d/"
+
+configure-solution:
+    stage: 01-configured-test-solution
+    script:
+      - "./.gitlab-ci/01-configured-test-solution.sh"
+    dependencies:
+      - configure-solution
 
 revert-solution:
   stage: 02-spin-that-car-around
   script:
     - "./.gitlab-ci/02-revert-solution.sh"
+  dependencies:
+    - configure-solution
+
+reverted-solution:
   stage: 03-reverted-test-solution
   script:
     - "./.gitlab-ci/03-reverted-test-solution.sh"
