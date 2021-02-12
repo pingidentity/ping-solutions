@@ -44,10 +44,6 @@ echo "Cypress project ID is $CYPRESS_PROJECT_ID. Cypress key is $CYPRESS_RECORD_
 echo "Performing variable substitution"
 #let's set this bad boy up!
 #note: the ENV_ID up here is the master/admin ENV_ID for an environment, not the new. I'm going to forget about this.
-echo "Attempt will be made to remove env if exists, just in case a previous run/manual testing occured"
-cat ./.gitlab-ci/cypress.d/cypress/base_files/delete_env.base | \
-sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
-.gitlab-ci/cypress.d/cypress/integration/tests/01-delete_env.js 
 
 echo "Setting up P14C environment"
 cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | \
@@ -104,14 +100,14 @@ echo "WF worker token is $WORKER_APP_ACCESS_TOKEN"
 
 #performing initial PingOne WF creation scripts
 echo "Running WF creation scripts ....       ..   .. .  ."
-for script in ./Solutions/WF/PingOne/*create.sh; do
+for script in ./Solutions/WF/PingOne/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done
 
-#performing initial PingOne WF set scripts
-echo "Running WF set scripts . . . .   .   . _ . .   . _ _ .   _ _   ."
-for script in ./Solutions/WF/PingOne/*set.sh; do
+#performing initial PingOne WF creation scripts
+echo "Running WF creation scripts ....       ..   .. .  ."
+for script in ./Solutions/WF/PingFederate/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done
