@@ -9,6 +9,7 @@ export CLIENT_SECRET=$(cat ./.gitlab-ci/cypress.d/client_secret.txt)
 export ENV_ID=$(cat ./.gitlab-ci/cypress.d/envid.txt)
 
 echo "Performing Workforce env cleanup."
+echo "Note: If pipeline does not succeed this may error if things are not already configured, we want to run it regardless just in case."
 
 echo "Running variable substitution..."
 cat ./.gitlab-ci/cypress.d/cypress/base_files/reverted_state_check.base | \

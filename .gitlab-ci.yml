@@ -40,7 +40,6 @@ configured-test-solution:
 
 revert-solution:
   stage: 02-spin-that-car-around
-  when: always
   script:
     - "./.gitlab-ci/02-revert-solution.sh"
 
@@ -51,5 +50,6 @@ reverted-test-solution:
 
 env-cleanup:
   stage: 04-back-from-the-moon
+  when: always
   script:
     - "./.gitlab-ci/04-cleanup.sh"

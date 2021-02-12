@@ -30,8 +30,13 @@ DEVOPS
 
 #WORKFORCEEEEEEEEEEE
 
-#setup the env name
+#setup the env name. echoing because something might not be set?
 export ENV_NAME=$( date +"RUNNER_ENV_"%Y%m%d )
+echo "Environmant name is $ENV_NAME"
+echo "Admin Environment ID is $ADMIN_ENV_ID"
+echo "Console user is $CONSOLE_USERNAME"
+echo "Cypress project ID is $CYPRESS_PROJECT_ID. Cypress key is $CYPRESS_RECORD_KEY"
+
 
 echo "Performing variable substitution"
 #let's set this bad boy up!
@@ -52,6 +57,15 @@ awk -v env="$ADMIN_ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD" -
 cat ./.gitlab-ci/cypress.d/cypress/base_files/cypress.json.base | \
 awk -v pid=PID -v setpid="$CYPRESS_PROJECT_ID" '{sub(pid,setpid)}1' > ./.gitlab-ci/cypress.d/cypress.json
 
+
+#lets crash and burn here if these don't exist
+if [ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/create_env.js ] || \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/create_worker_app.js ]; then
+  echo "Variable substitution to set up environment not performed properly, exiting now..."
+  exit 1
+fi
+
+#docker base options
 DOCKER_RUN_OPTIONS="-i --rm"
 # Only allocate tty if we detect one
 if [ -t 0 ] && [ -t 1 ]; then
@@ -65,7 +79,6 @@ docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /
 rm ./.gitlab-ci/cypress.d/cypress/integration/tests/create*.js 
 
 #set Ping One variables for WF
-#this is 
 export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/client_id.txt)
 export CLIENT_SECRET=$(cat ./.gitlab-ci/cypress.d/client_secret.txt)
 export ENV_ID=$(cat ./.gitlab-ci/cypress.d/envid.txt)
