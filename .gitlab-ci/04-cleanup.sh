@@ -13,9 +13,8 @@ echo "Note: If pipeline does not succeed this may error if things are not alread
 
 echo "Running variable substitution..."
 cat ./.gitlab-ci/cypress.d/cypress/base_files/reverted_state_check.base | \
-awk -v env="$ADMIN_ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD"  -v ename="$ENV_NAME" \
--v eid="ENV_ID" -v tu="TEST_USERNAME" -v tp="TEST_PASSWORD" -v oename="ENV_NM" \
-'{sub(eid,env)} {sub(tu,cu)} {sub(oename,ename)} {sub(tp,cp)}1' >\
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" \
+-e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
 ./.gitlab-ci/cypress.d/cypress/integration/tests/reverted_state_check.js 
 
 DOCKER_RUN_OPTIONS="-i --rm"
