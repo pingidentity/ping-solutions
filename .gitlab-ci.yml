@@ -38,8 +38,6 @@ test-configured-solution:
     stage: 00-to-the-moon
     script:
       - "./.gitlab-ci/01-configured-test-solution.sh"
-    dependencies:
-      - configure-solution
 
 revert-solution:
   stage: 01-spin-that-car-around
