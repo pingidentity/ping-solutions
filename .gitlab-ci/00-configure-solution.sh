@@ -42,7 +42,7 @@ echo "Performing variable substitution"
 #let's set this bad boy up!
 #note: the ENV_ID up here is the master/admin ENV_ID for an environment, not the new. I'm going to forget about this.
 echo "Setting up P14C environment"
-cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | 
+cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | \
 awk -v env="$ADMIN_ENV_ID" -v cu="$CONSOLE_USERNAME" -v cp="$CONSOLE_PASSWORD" -v ename="$ENV_NAME" \
 -v eid="ENV_ID" -v tu="TEST_USERNAME" -v tp="TEST_PASSWORD" -v oename="ENV_NM" \
 '{sub(eid,env)} {sub(tu,cu)} {sub(oename,ename)} {sub(tp,cp)}1' > \
