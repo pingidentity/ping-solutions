@@ -18,7 +18,7 @@ Cypress.Commands.add('getIframeBody', () => {
 })
 
 
-describe('Check password policy is unset', () => {
+describe('Check password policy is set', () => {
     it('Visits PingOne Console', () => {
       cy.visit('https://console.pingone.com/?env=ENV_ID');
       //login
@@ -29,23 +29,22 @@ describe('Check password policy is unset', () => {
       //switch to environment
       cy.get('.astro-environment-selector__trigger').click();
       cy.get('.astro-environment-selector__environment').contains('ENV_NM').click();
-      //navigate to identities > users.
       cy.get(':nth-child(3) > .nav-sidebar__section').click();
-      //cy.get(':nth-child(2) > .nav-sidebar__node > .nav-sidebar__node-label').click();
       cy.get('.nav-sidebar__node').contains('Users').click();
-      //No Bob's allowed here!
-      cy.getIframeBody().find('[data-id="searchbar-input"]').type('Bob');
-      cy.getIframeBody().find('[data-id="user-list"]').contains('No users found.');
+      //name is Bond, Tom Bond.
+      cy.getIframeBody().find('[data-id="searchbar-input"]').type('Bond');
+      cy.getIframeBody().find('[data-id="user-list"]').contains('Tom');
       //Let's move to risk policies!
       cy.get(':nth-child(5) > .nav-sidebar__section').click();
       cy.get('.nav-sidebar__node').contains('Risk Policies').click();
-      //Let's make sure we are default risky
-      cy.getIframeBody().find('[data-id="expandable-row"]').contains('Default Risk');
+      //Let's make sure we are highly risky
+      cy.getIframeBody().find('[data-id="expandable-row"]').contains('High Risk Policy');
       //finally, let's look at some password policies!
       cy.get('.nav-sidebar__node').contains('Password Policies').click();
-      cy.getIframeBody().find('[data-id="policy-name-field-input"]').should('have.value','Basic');
+      cy.getIframeBody().find('[data-id="policy-name-field-input"]').should('have.value','Passphrase');
       //get on out of here!
       cy.get('[data-id="account"]').click();
       cy.get('[data-id="signoff.link"]').click();
+
     })
 })

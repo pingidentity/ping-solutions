@@ -32,10 +32,10 @@ DEVOPS
 
 #setup the env name. echoing because something might not be set?
 export ENV_NAME=$( date +"RUNNER_ENV_"%Y%m%d )
-echo "Environment name is $ENV_NAME"
-echo "Admin Environment ID is $ADMIN_ENV_ID"
-echo "Console user is $CONSOLE_USERNAME"
-if [ -z ${CONSOLE_PASSWORD+x} ]; then echo "Console password is unset"; else echo "Console password is set."; fi
+if [ -z ${ENV_NAME+x} ]; then echo "Console password is unset" && exit 1; else echo "Environment name is $ENV_NAME"; fi
+if [ -z ${ADMIN_ENV_ID+x} ]; then echo "Console password is unset" && exit 1; else echo "Admin Environment ID is $ADMIN_ENV_ID"; fi
+if [ -z ${CONSOLE_USERNAME+x} ]; then echo "Console password is unset" && exit 1; else echo "Console user is $CONSOLE_USERNAME"; fi
+if [ -z ${CONSOLE_PASSWORD+x} ]; then echo "Console password is unset" && exit 1; else echo "Console password is set."; fi
 
 echo "Cypress project ID is $CYPRESS_PROJECT_ID. Cypress key is $CYPRESS_RECORD_KEY"
 
@@ -44,25 +44,26 @@ echo "Cypress project ID is $CYPRESS_PROJECT_ID. Cypress key is $CYPRESS_RECORD_
 echo "Performing variable substitution"
 #let's set this bad boy up!
 #note: the ENV_ID up here is the master/admin ENV_ID for an environment, not the new. I'm going to forget about this.
+echo "Attempt will be made to remove env if exists, just in case a previous run/manual testing occured"
+cat ./.gitlab-ci/cypress.d/cypress/base_files/delete_env.base | \
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
+.gitlab-ci/cypress.d/cypress/integration/tests/01-delete_env.js 
+
 echo "Setting up P14C environment"
 cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | \
-sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" \
--e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
-./.gitlab-ci/cypress.d/cypress/integration/tests/create_env.js 
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
+.gitlab-ci/cypress.d/cypress/integration/tests/02-create_env.js 
 
 cat ./.gitlab-ci/cypress.d/cypress/base_files/create_worker_app.base | \
-sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" \
--e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
-./.gitlab-ci/cypress.d/cypress/integration/tests/create_worker_app.js 
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
+.gitlab-ci/cypress.d/cypress/integration/tests/03-create_worker_app.js 
 
-cat ./.gitlab-ci/cypress.d/cypress/base_files/cypress.json.base | \
-sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > ./.gitlab-ci/cypress.d/cypress.json
-#awk -v pid=PID -v setpid="$CYPRESS_PROJECT_ID" '{sub(pid,setpid)}1' > ./.gitlab-ci/cypress.d/cypress.json
+cat ./.gitlab-ci/cypress.d/cypress/base_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > .gitlab-ci/cypress.d/cypress.json
 
 
 #lets crash and burn here if these don't exist
-if [ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/create_env.js ] || \
-[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/create_worker_app.js ]; then
+if [ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/02-create_env.js ] || \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/03-create_worker_app.js ]; then
   echo "Variable substitution to set up environment not performed properly, exiting now..."
   exit 1
 fi
@@ -76,9 +77,11 @@ fi
 
 echo "Launching Docker to set up environment"
 
-docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
+docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run 
+#docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
 
-rm ./.gitlab-ci/cypress.d/cypress/integration/tests/create*.js 
+
+rm .gitlab-ci/cypress.d/cypress/integration/tests/*.js 
 
 #set Ping One variables for WF
 export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/client_id.txt)
