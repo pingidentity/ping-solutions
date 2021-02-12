@@ -32,10 +32,13 @@ DEVOPS
 
 #setup the env name. echoing because something might not be set?
 export ENV_NAME=$( date +"RUNNER_ENV_"%Y%m%d )
-echo "Environmant name is $ENV_NAME"
+echo "Environment name is $ENV_NAME"
 echo "Admin Environment ID is $ADMIN_ENV_ID"
 echo "Console user is $CONSOLE_USERNAME"
+if [ -z ${CONSOLE_PASSWORD+x} ]; then echo "Console password is unset"; else echo "Console password is set'"; fi
+
 echo "Cypress project ID is $CYPRESS_PROJECT_ID. Cypress key is $CYPRESS_RECORD_KEY"
+
 
 
 echo "Performing variable substitution"
