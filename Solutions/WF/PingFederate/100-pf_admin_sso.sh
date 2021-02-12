@@ -14,27 +14,33 @@ USER_SCHEMA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$E
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.schemas[].id'
 )
 
-# create PingFed Admin Role attribute
-PF_ADMIN_ATTRIBUTE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
---header 'Content-Type: application/json' \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
---data-raw '{
+# check to make sure PingFed Admin Role was created
+CHECK_ADMIN_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-roles") | .enabled')
+
+if [ "$CHECK_ADMIN_ATTRIBUTE" != "true" ]; then
+    echo "PingFederate Admin attribute not created, creating now..."
+    # create PingFed Admin Role attribute
+    PF_ADMIN_ATTRIBUTE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
+    --header 'Content-Type: application/json' \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+    --data-raw '{
     "description": " ",
-    "displayName": "PingFederate Admin Role",
+    "displayName": "PingFed Admin Roles",
     "enabled": true,
-    "name": "pf-admin-role",
+    "name": "pf-admin-roles",
     "required": false,
     "type": "STRING",
     "unique": false
-}')
+    }')
 
-# check to make sure PingFed Admin Role was created
-CHECK_ADMIN_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .enabled')
-
-if [ "$CHECK_ADMIN_ATTRIBUTE" != "true" ]; then
-    echo "PingFederate Admin attribute not created..."
-    exit 1
+    CHECK_ADMIN_ATTRIBUTE_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-roles") | .enabled')
+    if [ "$CHECK_ADMIN_ATTRIBUTE_AGAIN" != "true" ]; then
+        echo "PingFederate Admin attribute not created..."
+        exit 1
+    else
+        echo "PingFederate Admin attribute created..."
+    fi
 else
     echo "PingFederate Admin attribute created..."
 fi
@@ -97,32 +103,32 @@ APP_NAME_ID=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV
     "required": true
 }')
 
-# add pf-admin-role to App
+# add pf-admin-roles to App
 APP_PF_ADMIN_ROLE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 --data-raw '{
-    "name": "pf-admin-role",
-    "value": "${user.pf-admin-role}",
+    "name": "pf-admin-roles",
+    "value": "${user.pf-admin-roles}",
     "required": true
 }')
 
 # verify pf-admin-role attribute
 CHECK_WEB_OIDC_APP_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .name')
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-roles") | .name')
 
-if [ "$CHECK_WEB_OIDC_APP_ATTR" != "pf-admin-role" ]; then
+if [ "$CHECK_WEB_OIDC_APP_ATTR" != "pf-admin-roles" ]; then
     echo "PingFederate Admin SSO App custom attribute not created..."
     exit 1
 else
     echo "PingFederate Admin SSO App custom attribute created..."
 fi
 
-# get current Administrators Population
+# get current administrators Population
 ADMIN_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .id')
 
-# create PingFederate Admin SSO Account
+# create PingFederate admin SSO Account
 CREATE_ADMIN_ACCOUNT=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/users" \
 --header 'content-type: application/vnd.pingidentity.user.import+json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -135,7 +141,7 @@ CREATE_ADMIN_ACCOUNT=$(curl -s --location --request POST "$API_LOCATION/environm
     "lifecycle": {
         "status": "ACCOUNT_OK"
     },
-    "pf-admin-role": "fullAdmin",
+    "pf-admin-roles": "fullAdmin",
     "population": {
         "id": "'"$ADMIN_POP"'"
     },
@@ -190,33 +196,80 @@ else
 fi
 
 # export values into oidc properties tmp file
-OIDC_APP_OAUTH_CONTENT=$(curl -s --location --request GET "https://auth.pingone.com/$ENV_ID/as/.well-known/openid-configuration")
 
-APP_CLIENT_ID="$WEB_OIDC_APP_ID"
-APP_AUTHN_METHOD="client_secret_basic"
-APP_CLIENT_SECRET=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/secret" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.secret')
-APP_AUTH_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.authorization_endpoint' )
-APP_TOKEN_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.token_endpoint' )
-APP_USERINFO_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.userinfo_endpoint' )
-APP_SO_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.end_session_endpoint' )
-APP_ISSUER=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.issuer' )
-APP_SCOPES=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.scopes_supported' | sed -e 's/\[//g' -e 's/\"/ /g' -e 's/\ //g' -e 's/\,/ /g' -e 's/\]//g')
-APP_USERNAME_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.name.formatted}") | .name')
-APP_ATTR_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .name' )
-APP_ROLE_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/users/$ADMIN_ACCOUNT_ID?expand=population" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '."pf-admin-role"')
+# check for existing files
+OIDC_FILE="./oidc.properties.tmp"
+RUN_PROP_FILE="./run.properties.tmp"
 
-echo "client.id=$APP_CLIENT_ID" >> oidc.properties.tmp
-echo "client.authn.method=$APP_AUTHN_METHOD" >> oidc.properties.tmp
-# the client secret needs to be run against obfuscate script in PingFederate
-echo "client.secret=$APP_CLIENT_SECRET" >> oidc.properties.tmp
-echo "authorization.endpoint=$APP_AUTH_EP" >> oidc.properties.tmp
-echo "token.endpoint=$APP_TOKEN_EP" >> oidc.properties.tmp
-echo "user.info.endpoint=$APP_USERINFO_EP" >> oidc.properties.tmp
-echo "end.session.endpoint=$APP_SO_EP" >> oidc.properties.tmp
-echo "issuer=$APP_ISSUER" >> oidc.properties.tmp
-echo "scopes=$APP_SCOPES" >> oidc.properties.tmp
-echo "username.attribute.name=$APP_USERNAME_ATTRIBUTE" >> oidc.properties.tmp
-echo "role.attribute.name=$APP_ATTR_NAME" >> oidc.properties.tmp
-echo "role.admin=$APP_ROLE_NAME" >> oidc.properties.tmp
-echo "role.cryptoManager=$APP_ROLE_NAME" >> oidc.properties.tmp
-echo "role.userAdmin=$APP_ROLE_NAME" >> oidc.properties.tmp
+
+function write_oidc_file_out {
+
+    OIDC_APP_OAUTH_CONTENT=$(curl -s --location --request GET "https://auth.pingone.com/$ENV_ID/as/.well-known/openid-configuration")
+
+    APP_CLIENT_ID="$WEB_OIDC_APP_ID"
+    APP_AUTHN_METHOD="client_secret_basic"
+    APP_CLIENT_SECRET=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/secret" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.secret')
+    APP_AUTH_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.authorization_endpoint' )
+    APP_TOKEN_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.token_endpoint' )
+    APP_USERINFO_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.userinfo_endpoint' )
+    APP_SO_EP=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.end_session_endpoint' )
+    APP_ISSUER=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.issuer' )
+    APP_SCOPES=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.scopes_supported' | sed -e 's/\[//g' -e 's/\"/ /g' -e 's/ //g' -e 's/\,/ /g' -e 's/\]//g')
+    APP_USERNAME_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.name.formatted}") | .name')
+    APP_ATTR_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-roles") | .name' )
+    APP_ROLE_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/users/$ADMIN_ACCOUNT_ID?expand=population" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '."pf-admin-roles"')
+
+    echo "client.id=$APP_CLIENT_ID" >> $OIDC_FILE
+    echo "client.authn.method=$APP_AUTHN_METHOD" >> $OIDC_FILE
+    # the client secret needs to be run against obfuscate script in PingFederate
+    echo "client.secret=$APP_CLIENT_SECRET" >> $OIDC_FILE
+    echo "authorization.endpoint=$APP_AUTH_EP" >> $OIDC_FILE
+    echo "token.endpoint=$APP_TOKEN_EP" >> $OIDC_FILE
+    echo "user.info.endpoint=$APP_USERINFO_EP" >> $OIDC_FILE
+    echo "end.session.endpoint=$APP_SO_EP" >> $OIDC_FILE
+    echo "issuer=$APP_ISSUER" >> $OIDC_FILE
+    echo "scopes=$APP_SCOPES" >> $OIDC_FILE
+    echo "username.attribute.name=$APP_USERNAME_ATTRIBUTE" >> $OIDC_FILE
+    echo "role.attribute.name=$APP_ATTR_NAME" >> $OIDC_FILE
+    echo "role.admin=$APP_ROLE_NAME" >> $OIDC_FILE
+    echo "role.cryptoManager=$APP_ROLE_NAME" >> $OIDC_FILE
+    echo "role.userAdmin=$APP_ROLE_NAME" >> $OIDC_FILE
+    echo "role.expressionAdmin=eadmin" >> $OIDC_FILE
+}
+
+# handles existing oidc file, or creates said file
+if [ -f "$OIDC_FILE" ]; then
+    echo "Existing oidc file present, taking care of that..."
+    mv $OIDC_FILE "$OIDC_FILE.old"
+    echo -n "" > "$OIDC_FILE.old"
+    echo "Existing oidc file named to $OIDC_FILE.old"
+    write_oidc_file_out
+else
+    echo "No existing oidc file, creating now..."
+    write_oidc_file_out
+fi
+
+function write_prop_file_out {
+    # export values into run properties tmp file
+
+    PF_ADMIN_HOSTNAME="$PINGFED_BASE_URL"
+    OIDC_APP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .name')
+    CONSOLE_ENV_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '. | select(.name="Administrators") | .id')
+
+    echo "pf.admin.hostname=$PF_ADMIN_HOSTNAME" >> $RUN_PROP_FILE
+    echo "pf.console.title=$OIDC_APP_NAME" >> $RUN_PROP_FILE
+    echo "pf.console.environment=$CONSOLE_ENV_NAME" >> $RUN_PROP_FILE
+    echo "pf.console.authentication=OIDC" >> $RUN_PROP_FILE
+}
+
+# handles existing properties file, or creates said file
+if [ -f "$RUN_PROP_FILE" ]; then
+    echo "Existing properties file present, taking care of that..."
+    mv $RUN_PROP_FILE "$RUN_PROP_FILE.old"
+    echo -n "" > "$RUN_PROP_FILE.old"
+    echo "Existing properties file named to $RUN_PROP_FILE.old"
+    write_prop_file_out
+else
+    echo "No existing properties file, creating now..."
+    write_prop_file_out
+fi
