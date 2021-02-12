@@ -40,8 +40,6 @@ configure-solution:
     stage: 01-configured-test-solution
     script:
       - "./.gitlab-ci/01-configured-test-solution.sh"
-    dependencies:
-      - configure-solution
 
 revert-solution:
   stage: 02-spin-that-car-around
