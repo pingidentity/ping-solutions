@@ -8,19 +8,16 @@
 # WORKER_APP_ACCESS_TOKEN
 # PINGFED_BASE_URL
 # DOMAIN
-# ENV_NAME => this needs to be the Name of the desired environment
 
 # get schema ID needed for creating attribute
 USER_SCHEMA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.schemas[].id'
-)
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.schemas[].id')
 
 # check to make sure PingFed Admin Role was created
 CHECK_ADMIN_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-roles") | .enabled')
 
 if [ "$CHECK_ADMIN_ATTRIBUTE" != "true" ]; then
-    echo "PingFederate Admin attribute not created, creating now..."
     # create PingFed Admin Role attribute
     PF_ADMIN_ATTRIBUTE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
     --header 'Content-Type: application/json' \
@@ -130,7 +127,7 @@ ADMIN_POP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$E
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
 
 if [ "$ADMIN_POP_NAME" != "Administrators Population" ]; then
-    # create sample employee population
+    # create administrators population
     CREATE_ADMIN_POP=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/populations" \
     --header 'content-type: application/json' \
     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -212,10 +209,10 @@ CHECK_ADMIN_ROLE=$(curl -s --location --request GET "$API_LOCATION/environments/
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.roleAssignments[].scope.type')
 
 if [ "$CHECK_ADMIN_ROLE" != "ENVIRONMENT" ]; then
-    echo "PingFederate Admin environment admin role not created..."
+    echo "PingFederate Admin environment admin role not assigned..."
     exit 1
 else
-    echo "PingFederate Admin environment admin role created..."
+    echo "PingFederate Admin environment admin role assigned..."
 fi
 
 # export values into oidc properties tmp file
