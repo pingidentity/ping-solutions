@@ -23,13 +23,21 @@ echo "API URL path is $API_LOCATION"
 echo "Current Org ID is $ORG_ID"
 echo "WF worker token is $WORKER_APP_ACCESS_TOKEN"
 
+#performing final PingOne WF revertion/deletion scripts
+echo "Running WF PingFederate revertion scripts ....       ..   .. .  ."
+for script in ./Solutions/WF/PingFederate/*revert.sh; do
+  echo "Executing $script..."
+  bash $script 
+done
 
 #performing final PingOne revertion/deletion scripts
-echo "Running WF revert scripts . . . ..  .. . ."
+echo "Running WF PingOne revertion scripts . . . ..  .. . ."
 for script in ./Solutions/WF/PingOne/*revert.sh; do
   echo "Executing $script..."
   bash $script 
 done
+
+
 
 #CCCCCCCCIIIIIIIIIAAAAAAAAAMMMMMMMMM
 
@@ -51,8 +59,15 @@ echo "API URL path is $API_LOCATION"
 echo "Current Org ID is $ORG_ID"
 echo "CIAM worker token is $WORKER_APP_ACCESS_TOKEN"
 
+
+
 #performing final PingOne CIAM revert scripts
 echo "Running CIAM revert scripts . . . . . . . . . ."
+#performing final PingOne WF revertion/deletion scripts
+for script in ./Solutions/CIAM/PingFederate/*revert.sh; do
+  echo "Executing $script..."
+  bash $script 
+done
 #performing final PingOne revertion/deletion scripts
 for script in ./Solutions/CIAM/PingOne/*revert.sh; do
   echo "Executing $script..."
