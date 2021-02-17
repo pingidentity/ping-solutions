@@ -3,7 +3,7 @@
 # revert PingOne for PingFed Admin SSO
 
 #Variables needed to be passed for this script:
-# API_LOCATION=
+# API_LOCATION
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 

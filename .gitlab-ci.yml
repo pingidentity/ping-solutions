@@ -36,24 +36,24 @@ configure-solution:
       paths:
         - "./.gitlab-ci/cypress.d/"
 
-configured-test-solution:
-    stage: 01-configured-test-solution
+configured-test:
+    stage: 01-configured-test
     script:
-      - "./.gitlab-ci/01-configured-test-solution.sh"
+      - "./.gitlab-ci/01-configured-test.sh"
     dependencies:
       - configure-solution
 
 revert-solution:
-  stage: 02-spin-that-car-around
+  stage: 02-spin-that-rocket-around
   script:
     - "./.gitlab-ci/02-revert-solution.sh"
   dependencies:
     - configure-solution
 
-reverted-test-solution:
-  stage: 03-reverted-test-solution
+reverted-test:
+  stage: 03-reverted-test
   script:
-    - "./.gitlab-ci/03-reverted-test-solution.sh"
+    - "./.gitlab-ci/03-reverted-test.sh"
   dependencies:
     - configure-solution
 
