@@ -47,19 +47,29 @@ echo "Performing variable substitution"
 
 echo "Setting up P14C environment"
 cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | \
-sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
-.gitlab-ci/cypress.d/cypress/integration/tests/02-create_env.js 
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/WF_$ENV_NAME/g" > \
+.gitlab-ci/cypress.d/cypress/integration/tests/02-create_wf_env.js 
 
 cat ./.gitlab-ci/cypress.d/cypress/base_files/create_worker_app.base | \
-sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
-.gitlab-ci/cypress.d/cypress/integration/tests/03-create_worker_app.js 
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/WF_$ENV_NAME/g" -e "s/PROD_NM/WF/g" > \
+.gitlab-ci/cypress.d/cypress/integration/tests/03-create_wf_worker_app.js 
+
+cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | \
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/CIAM_$ENV_NAME/g" > \
+.gitlab-ci/cypress.d/cypress/integration/tests/04-create_ciam_env.js 
+
+cat ./.gitlab-ci/cypress.d/cypress/base_files/create_worker_app.base | \
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/CIAM_$ENV_NAME/g" -e "s/PROD_NM/CIAM/g" > \
+.gitlab-ci/cypress.d/cypress/integration/tests/05-create_ciam_worker_app.js 
 
 cat ./.gitlab-ci/cypress.d/cypress/base_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > .gitlab-ci/cypress.d/cypress.json
 
 
 #lets crash and burn here if these don't exist
-if [ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/02-create_env.js ] || \
-[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/03-create_worker_app.js ]; then
+if [ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/02-create_wf_env.js ] || \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/03-create_wf_worker_app.js ] || \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/04-create_ciam_env.js ] ||  \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/05-create_ciam_worker_app.js ]; then
   echo "Variable substitution to set up environment not performed properly, exiting now..."
   exit 1
 fi
@@ -80,9 +90,9 @@ docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /
 rm .gitlab-ci/cypress.d/cypress/integration/tests/*.js 
 
 #set Ping One variables for WF
-export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/client_id.txt)
-export CLIENT_SECRET=$(cat ./.gitlab-ci/cypress.d/client_secret.txt)
-export ENV_ID=$(cat ./.gitlab-ci/cypress.d/envid.txt)
+export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/WF_client_id.txt)
+export CLIENT_SECRET=$(cat ./.gitlab-ci/cypress.d/WF_client_secret.txt)
+export ENV_ID=$(cat ./.gitlab-ci/cypress.d/WF_envid.txt)
 
 
 #get a worker app token to run our tests (WF)
@@ -99,14 +109,14 @@ echo "Current Org ID is $ORG_ID"
 echo "WF worker token is $WORKER_APP_ACCESS_TOKEN"
 
 #performing initial PingOne WF creation scripts
-echo "Running WF creation scripts ....       ..   .. .  ."
+echo "Running WF PingOne creation scripts ....       ..   .. .  ."
 for script in ./Solutions/WF/PingOne/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done
 
 #performing initial PingOne WF creation scripts
-echo "Running WF creation scripts ....       ..   .. .  ."
+echo "Running WF PingFederate creation scripts ....       ..   .. .  ."
 for script in ./Solutions/WF/PingFederate/*set.sh; do
   echo "Executing $script..."
   bash $script 
@@ -115,16 +125,18 @@ done
 #CCCCCCCCIIIIIIIIIAAAAAAAAAMMMMMMMMM
 
 #set Ping One variables for CIAM
-export CLIENT_ID=$CIAM_CLIENT_ID
-export CLIENT_SECRET=$CIAM_CLIENT_SECRET
-export ENV_ID=$CIAM_ENV_ID
+export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/CIAM_client_id.txt)
+export CLIENT_SECRET=$(cat ./.gitlab-ci/cypress.d/CIAM_client_secret.txt)
+export ENV_ID=$(cat ./.gitlab-ci/cypress.d/CIAM_envid.txt)
 
-#get a worker app token to run our tests (CIAM)
+
+#get a worker app token to run our tests (WF)
 export WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
 --location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
 --header "Content-Type: application/x-www-form-urlencoded" \
 --data-raw 'grant_type=client_credentials' \
 | jq -r '.access_token')
+
 
 echo "Performing base PingOne CIAM configuration"
 echo "Environment ID is $ENV_ID"
@@ -134,15 +146,16 @@ echo "CIAM worker token is $WORKER_APP_ACCESS_TOKEN"
 
 
 #performing initial PingOne CIAM creation scripts
-echo "Running CIAM creation scripts . . . . . . . . . ."
-for script in ./Solutions/CIAM/PingOne/*create.sh; do
+echo "Running CIAM PingOne set scripts . !"
+#performing initial PingOne CIAM set scripts
+for script in ./Solutions/CIAM/PingOne/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done
 
-echo "Running CIAM set scripts . !"
-#performing initial PingOne CIAM set scripts
-for script in ./Solutions/CIAM/PingOne/*set.sh; do
+#performing initial PingOne WF creation scripts
+echo "Running CIAM PingFederate creation scripts ....       ..   .. .  ."
+for script in ./Solutions/CIAM/PingFederate/*set.sh; do
   echo "Executing $script..."
   bash $script 
 done
