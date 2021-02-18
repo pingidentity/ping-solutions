@@ -32,8 +32,8 @@ describe('Check password policy is set', () => {
       cy.get(':nth-child(3) > .nav-sidebar__section').click();
       cy.get('.nav-sidebar__node').contains('Users').click();
       //name is Bond, Tom Bond.
-      cy.getIframeBody().find('[data-id="searchbar-input"]').type('Bond');
-      cy.getIframeBody().find('[data-id="user-list"]').contains('Tom');
+      cy.getIframeBody().find('[data-id="searchbar-input"]').type('Burlie');
+      cy.getIframeBody().find('[data-id="user-list"]').contains('Allen');
       //Let's move to risk policies!
       cy.get(':nth-child(5) > .nav-sidebar__section').click();
       cy.get('.nav-sidebar__node').contains('Risk Policies').click();
