@@ -19,7 +19,7 @@ Cypress.Commands.add('getIframeBody', () => {
 
 
 describe('Create worker app', () => {
-    it('Visits PingOne Console', () => {
+    it('Visits ENV_NM PingOne Console and creates worker app', () => {
         cy.visit('https://console.pingone.com/?env=ENV_ID');
         //hide the new user guides, I don't wanna figure out clicking it.
         window.localStorage.setItem('ping-hideCompassGuide-ENV_ID','true')

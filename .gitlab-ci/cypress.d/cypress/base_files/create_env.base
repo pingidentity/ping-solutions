@@ -19,7 +19,7 @@ Cypress.Commands.add('getIframeBody', () => {
 
 
 describe('Create new P14C environment', () => {
-    it('Visits PingOne Console', () => {
+    it('Visits ENV_NM PingOne Console and creates base environment', () => {
       cy.visit('https://console.pingone.com/?env=ENV_ID');
       //login
       cy.get('#username').type('TEST_USERNAME');

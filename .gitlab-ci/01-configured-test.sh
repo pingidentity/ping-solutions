@@ -14,7 +14,7 @@ export ENV_ID=$(cat ./.gitlab-ci/cypress.d/WF_envid.txt)
 echo "Performing tests on configured state."
 echo "Performing WF variable substitution..."
 cat ./.gitlab-ci/cypress.d/cypress/base_files/configured_state_check.base | \
-sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/WF_$ENV_NAME/g" > \
 .gitlab-ci/cypress.d/cypress/integration/tests/01-WF_configured_state_check.js 
 
 #set Ping One variables for CIAM
@@ -25,7 +25,7 @@ export ENV_ID=$(cat ./.gitlab-ci/cypress.d/CIAM_envid.txt)
 #echo "Performing tests on configured state."
 #echo "Performing CIAM variable substitution..."
 #cat ./.gitlab-ci/cypress.d/cypress/base_files/configured_state_check.base | \
-#sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$ENV_NAME/g" > \
+#sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/CIAM_$ENV_NAME/g" > \
 #.gitlab-ci/cypress.d/cypress/integration/tests/02-CIAM_configured_state_check.js 
 
 
