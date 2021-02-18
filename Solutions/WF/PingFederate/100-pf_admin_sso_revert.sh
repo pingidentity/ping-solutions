@@ -11,7 +11,7 @@
 CHECK_ADMIN_ACCOUNT=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/users" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.users[] | select(.username=="PingFederateAdmin") | .username')
 
-# check, delete admin account
+# check, delete admin account - this must be done before removing a population
 if [ "$CHECK_ADMIN_ACCOUNT" == "PingFederateAdmin" ]; then
     echo "PingFederate Admin account found, removing..."
 
@@ -36,10 +36,11 @@ else
     echo "PingFederate Admin account not found does not currently exist, proceeding to next step..."
 fi
 
-# check, delete administrator population - this must be done before removing admin user
+# check administrator population
 ADMIN_POP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
 
+# check, delete administrator population
 if [ "$ADMIN_POP_NAME" == "Administrators Population" ]; then
     echo "Existing Administrators Population found, removing..."
 

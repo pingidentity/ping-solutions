@@ -12,7 +12,7 @@ SAMPLE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/
 
 # check if sample users population is present, create groups based on sample users population
 if [[ -z "$SAMPLE_USERS_POP" ]] || [[ "$SAMPLE_USERS_POP" == "" ]]; then
-    echo "Sample Users population does not exist initially, proceeding..."
+    echo "Sample Users population does not exist initially, exiting..."
 else
     # making sure sample users population ID contains no whitespace
     SAMPLE_USERS_POP_ID=$(echo $SAMPLE_USERS_POP | sed -e 's/ //g' )
