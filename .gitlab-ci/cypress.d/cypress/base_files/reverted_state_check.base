@@ -17,8 +17,7 @@ Cypress.Commands.add('getIframeBody', () => {
   .then(cy.wrap)
 })
 
-
-describe('Check password policy is unset', () => {
+describe('Check ENV_NM is reverted to base state', () => {
     it('Visits PingOne Console', () => {
       cy.visit('https://console.pingone.com/?env=ENV_ID');
       //login
@@ -33,9 +32,8 @@ describe('Check password policy is unset', () => {
       cy.get(':nth-child(3) > .nav-sidebar__section').click();
       //cy.get(':nth-child(2) > .nav-sidebar__node > .nav-sidebar__node-label').click();
       cy.get('.nav-sidebar__node').contains('Users').click();
-      //No Bob's allowed here!
-      cy.getIframeBody().find('[data-id="searchbar-input"]').type('Bob');
-      cy.getIframeBody().find('[data-id="user-list"]').contains('No users found.');
+      //No Bob's (or anyone!) allowed here!
+      cy.getIframeBody().find('[data-id="styled-text"]').contains('There are no users in this environment.');
       //Let's move to risk policies!
       cy.get(':nth-child(5) > .nav-sidebar__section').click();
       cy.get('.nav-sidebar__node').contains('Risk Policies').click();
