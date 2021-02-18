@@ -8,7 +8,7 @@ workflow:
 stages:
   - 00-to-the-moon
   - 01-configured-test
-  - 02-spin-that-rocket-around
+  - 02-spin-that-car-around
   - 03-reverted-test
   - 04-back-from-the-moon
 
@@ -36,7 +36,7 @@ configure-solution:
       paths:
         - "./.gitlab-ci/cypress.d/"
 
-configured-test:
+test-configured-state:
     stage: 01-configured-test
     script:
       - "./.gitlab-ci/01-configured-test.sh"
@@ -44,13 +44,13 @@ configured-test:
       - configure-solution
 
 revert-solution:
-  stage: 02-spin-that-rocket-around
+  stage: 02-spin-that-car-around
   script:
     - "./.gitlab-ci/02-revert-solution.sh"
   dependencies:
     - configure-solution
 
-reverted-test:
+test-reverted-state:
   stage: 03-reverted-test
   script:
     - "./.gitlab-ci/03-reverted-test.sh"
