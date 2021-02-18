@@ -155,5 +155,7 @@ if [ "$MORE_SAMPLE_USERS_POP_NAME" == "More Sample Users" ]; then
     fi
 
 else
-    echo "Expected More Sample Users population does not currently exist, proceeding to next step..."
+    echo "Expected More Sample Users population does not currently exist..."
 fi
+
+echo "Revert User Populations checks and tasks completed."
