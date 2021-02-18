@@ -7,9 +7,9 @@ workflow:
 
 stages:
   - 00-to-the-moon
-  - 01-configured-test-solution
-  - 02-spin-that-car-around
-  - 03-reverted-test-solution
+  - 01-configured-test
+  - 02-spin-that-rocket-around
+  - 03-reverted-test
   - 04-back-from-the-moon
 
 default:
