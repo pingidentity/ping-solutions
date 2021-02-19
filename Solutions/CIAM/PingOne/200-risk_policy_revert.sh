@@ -1,23 +1,24 @@
 #!/bin/bash
-# update PingOne Default Risk Policy to use Workforce config
+
+# revert PingOne CIAM Risk Policy to use Default naming
 
 #Variables needed to be passed for this script:
 # API_LOCATION
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 
-# Get Current Default Risk Policy
+# Get Current CIAM Default Risk Policy
 RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default Risk Policy") | .id')
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default CIAM Risk Policy") | .id')
 
-# Set Default Risk Policy to Workforce Name
+# Revert Default Risk Policy from CIAM use case
 SET_RISK_POL_NAME=$(curl -s --write-out "%{http_code}\n" --location --request PUT "$API_LOCATION/environments/$ENV_ID/riskPolicySets/$RISK_POL_SET_ID" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
---data-raw '{"name" : "High Risk Policy",
+--data-raw '{"name" : "Default Risk Policy",
       "default" : true,
       "canUseIntelligenceDataConsent": true,
-      "description" : "Workforce Risk Policy",
+      "description" : "These are the default values for the risk policy. We recommend changing them according to your organizational needs and adding relevant IP ranges to a whitelist, using the Overrides.",
       "defaultResult" : {
         "level" : "LOW",
         "type" : "VALUE"
@@ -97,16 +98,16 @@ if [ "$SET_RISK_POL_NAME_RESULT" == "200" ]; then
   # validate expected risk policy name change
   RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
   --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-  | jq -rc '._embedded.riskPolicySets[]  | select(.name=="High Risk Policy") | .name')
+  | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default Risk Policy") | .name')
 
   # check expected name from config change
-  if [ "$RISK_POL_STATUS" = "High Risk Policy" ]; then
-    echo "Verified Default Workforce High Risk Policy set successfully..."
+  if [ "$RISK_POL_STATUS" = "Default Risk Policy" ]; then
+    echo "Verfied Default Risk Policy set back to default from CIAM use case..."
   else
-    echo "Workforce High Risk Policy NOT set successfully!"
+    echo "Default Risk Policy NOT set back to default from CIAM use case successfully!"
     exit 1
   fi
 else
-    echo "Something went wrong with setting the Workforce High Risk Policy!"
+    echo "Something went wrong with setting the CIAM Risk Policy back to Default!"
     exit 1
 fi

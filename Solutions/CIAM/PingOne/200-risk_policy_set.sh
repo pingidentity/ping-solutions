@@ -1,5 +1,5 @@
 #!/bin/bash
-# update PingOne Default Risk Policy to use Workforce config
+# update PingOne Default Risk Policy to use CIAM config
 
 #Variables needed to be passed for this script:
 # API_LOCATION
@@ -10,14 +10,14 @@
 RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default Risk Policy") | .id')
 
-# Set Default Risk Policy to Workforce Name
+# Set Default Risk Policy to CIAM Name
 SET_RISK_POL_NAME=$(curl -s --write-out "%{http_code}\n" --location --request PUT "$API_LOCATION/environments/$ENV_ID/riskPolicySets/$RISK_POL_SET_ID" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
---data-raw '{"name" : "High Risk Policy",
+--data-raw '{"name" : "Default CIAM Risk Policy",
       "default" : true,
       "canUseIntelligenceDataConsent": true,
-      "description" : "Workforce Risk Policy",
+      "description" : "For Use with PingFederate",
       "defaultResult" : {
         "level" : "LOW",
         "type" : "VALUE"
@@ -57,7 +57,7 @@ SET_RISK_POL_NAME=$(curl -s --write-out "%{http_code}\n" --location --request PU
             "weight" : 5
           }, {
             "value" : "${details.aggregatedWeights.userRiskBehavior}",
-            "weight" : 10
+            "weight" : 0
           } ]
         }
       },
@@ -84,7 +84,7 @@ SET_RISK_POL_NAME=$(curl -s --write-out "%{http_code}\n" --location --request PU
             "weight" : 5
           }, {
             "value" : "${details.aggregatedWeights.userRiskBehavior}",
-            "weight" : 10
+            "weight" : 0
           } ]
         }
       } ]
@@ -97,16 +97,16 @@ if [ "$SET_RISK_POL_NAME_RESULT" == "200" ]; then
   # validate expected risk policy name change
   RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
   --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-  | jq -rc '._embedded.riskPolicySets[]  | select(.name=="High Risk Policy") | .name')
+  | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default CIAM Risk Policy") | .name')
 
   # check expected name from config change
-  if [ "$RISK_POL_STATUS" = "High Risk Policy" ]; then
-    echo "Verified Default Workforce High Risk Policy set successfully..."
+  if [ "$RISK_POL_STATUS" = "Default CIAM Risk Policy" ]; then
+    echo "Verified Default CIAM Risk Policy set successfully..."
   else
-    echo "Workforce High Risk Policy NOT set successfully!"
+    echo "Default CIAM Risk Policy NOT set successfully!"
     exit 1
   fi
 else
-    echo "Something went wrong with setting the Workforce High Risk Policy!"
+    echo "Something went wrong with setting the CIAM Risk Policy!"
     exit 1
 fi
