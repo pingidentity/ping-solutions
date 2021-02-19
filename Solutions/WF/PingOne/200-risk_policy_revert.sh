@@ -9,10 +9,10 @@
 
 # Get Current Default Risk Policy
 RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -r ._embedded.riskPolicySets[0].id)
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.riskPolicySets[]  | select(.name=="High Risk Policy") | .id')
 
 # Revert Default Risk Policy from Workforce use case
-SET_RISK_POL_NAME=$(curl -s --location --request PUT "$API_LOCATION/environments/$ENV_ID/riskPolicySets/$RISK_POL_SET_ID" \
+SET_RISK_POL_NAME=$(curl -s --write-out "%{http_code}\n" --location --request PUT "$API_LOCATION/environments/$ENV_ID/riskPolicySets/$RISK_POL_SET_ID" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 --data-raw '{"name" : "Default Risk Policy",
@@ -91,14 +91,23 @@ SET_RISK_POL_NAME=$(curl -s --location --request PUT "$API_LOCATION/environments
       } ]
 }')
 
-# Validate
-RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-| jq -rc '._embedded.riskPolicySets[0].name')
+# check response code
+SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
 
-if [ "$RISK_POL_STATUS" = "Default Risk Policy" ]; then
-  echo "Risk policy set successfully..."
+if [ "$SET_RISK_POL_NAME_RESULT" == "200" ]; then
+  # validate expected risk policy name change
+  RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
+  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+  | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default Risk Policy") | .name')
+
+  # check expected name from config change
+  if [ "$RISK_POL_STATUS" = "Default Risk Policy" ]; then
+    echo "Verfied Default Risk Policy set back to default from Workforce use case..."
+  else
+    echo "Default Risk Policy NOT set back to default from Workforce use case successfully!"
+    exit 1
+  fi
 else
-  echo "Risk policy not set successfully..."
-  exit 1
+    echo "Something went wrong with setting the Workforce Risk Policy back to Default!"
+    exit 1
 fi
