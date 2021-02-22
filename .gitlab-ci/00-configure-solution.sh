@@ -46,30 +46,30 @@ echo "Performing variable substitution"
 #note: the ENV_ID up here is the master/admin ENV_ID for an environment, not the new. I'm going to forget about this.
 
 echo "Setting up P14C environment"
-cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | \
+cat ./.gitlab-ci/cypress.d/cypress/base_files/runner_tests/create_env.base | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/WF_$ENV_NAME/g" > \
-.gitlab-ci/cypress.d/cypress/integration/tests/02-create_wf_env.js 
+.gitlab-ci/cypress.d/cypress/integration/WF/02-create_wf_env.js 
 
-cat ./.gitlab-ci/cypress.d/cypress/base_files/create_worker_app.base | \
+cat ./.gitlab-ci/cypress.d/cypress/base_files/runner_tests/create_worker_app.base | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/WF_$ENV_NAME/g" -e "s/PROD_NM/WF/g" > \
-.gitlab-ci/cypress.d/cypress/integration/tests/03-create_wf_worker_app.js 
+.gitlab-ci/cypress.d/cypress/integration/WF/03-create_wf_worker_app.js 
 
-cat ./.gitlab-ci/cypress.d/cypress/base_files/create_env.base | \
+cat ./.gitlab-ci/cypress.d/cypress/base_files/runner_tests/create_env.base | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/CIAM_$ENV_NAME/g" > \
-.gitlab-ci/cypress.d/cypress/integration/tests/04-create_ciam_env.js 
+.gitlab-ci/cypress.d/cypress/integration/CIAM/04-create_ciam_env.js 
 
-cat ./.gitlab-ci/cypress.d/cypress/base_files/create_worker_app.base | \
+cat ./.gitlab-ci/cypress.d/cypress/base_files/runner_tests/create_worker_app.base | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/CIAM_$ENV_NAME/g" -e "s/PROD_NM/CIAM/g" > \
-.gitlab-ci/cypress.d/cypress/integration/tests/05-create_ciam_worker_app.js 
+.gitlab-ci/cypress.d/cypress/integration/CIAM/05-create_ciam_worker_app.js 
 
-cat ./.gitlab-ci/cypress.d/cypress/base_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > .gitlab-ci/cypress.d/cypress.json
+cat ./.gitlab-ci/cypress.d/cypress/base_files/runner_tests/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > .gitlab-ci/cypress.d/cypress.json
 
 
 #lets crash and burn here if these don't exist
-if [ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/02-create_wf_env.js ] || \
-[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/03-create_wf_worker_app.js ] || \
-[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/04-create_ciam_env.js ] ||  \
-[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/tests/05-create_ciam_worker_app.js ]; then
+if [ ! -f ./.gitlab-ci/cypress.d/cypress/integration/WF/02-create_wf_env.js ] || \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/WF/03-create_wf_worker_app.js ] || \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/CIAM/04-create_ciam_env.js ] ||  \
+[ ! -f ./.gitlab-ci/cypress.d/cypress/integration/CIAM/05-create_ciam_worker_app.js ]; then
   echo "Variable substitution to set up environment not performed properly, exiting now..."
   exit 1
 fi
@@ -87,7 +87,7 @@ docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /
 #docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
 
 
-rm .gitlab-ci/cypress.d/cypress/integration/tests/*.js 
+rm .gitlab-ci/cypress.d/cypress/integration/*/*.js 
 
 #set Ping One variables for WF
 export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/WF_client_id.txt)
