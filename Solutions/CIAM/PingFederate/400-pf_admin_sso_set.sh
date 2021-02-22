@@ -153,7 +153,7 @@ CREATE_ADMIN_ACCOUNT=$(curl -s --location --request POST "$API_LOCATION/environm
 --header 'content-type: application/vnd.pingidentity.user.import+json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 --data-raw '{
-    "email": "'"administrator@$DOMAIN"'",
+    "email": "'"pingfederateadmin@$DOMAIN"'",
     "name": {
         "given": "Administrator",
         "family": "User"
