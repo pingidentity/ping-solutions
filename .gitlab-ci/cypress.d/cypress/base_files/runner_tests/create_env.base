@@ -2,6 +2,7 @@ Cypress.on('uncaught:exception', (err, runnable) => {
     // returning false here prevents Cypress from
     // failing the test
     // sign in caused problems without this... I don't care, it still fails if we messed something up.
+    expect(err.message).to.include('error originated from your application code');
     return false
 })
 
