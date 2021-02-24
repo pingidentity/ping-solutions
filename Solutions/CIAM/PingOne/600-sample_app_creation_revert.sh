@@ -3,9 +3,9 @@
 # revert PingOne Sample SAML Apps for CIAM
 
 #Variables needed to be passed for this script:
-API_LOCATION="https://api.pingone.com/v1"
-ENV_ID="ae276c77-af5c-4ae5-a82d-be219cf1b6ea"
-WORKER_APP_ACCESS_TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6ImRlZmF1bHQifQ.eyJjbGllbnRfaWQiOiJhNjlhNTY5Yy03YjI4LTQwMmItOGUyOC00NTBmOTAzYTVjZWYiLCJpc3MiOiJodHRwczovL2F1dGgucGluZ29uZS5jb20vYWUyNzZjNzctYWY1Yy00YWU1LWE4MmQtYmUyMTljZjFiNmVhL2FzIiwiaWF0IjoxNjE0MTg2MTEyLCJleHAiOjE2MTQxODk3MTIsImF1ZCI6WyJodHRwczovL2FwaS5waW5nb25lLmNvbSJdLCJlbnYiOiJhZTI3NmM3Ny1hZjVjLTRhZTUtYTgyZC1iZTIxOWNmMWI2ZWEiLCJvcmciOiIyMDQ4YjAxZC0xMjFlLTRiZWEtODc1MC1kMzNkZTY4ZmQ2ZGUifQ.N6vrcowyunQbv1_QZ-uCpegFBFfNgqsKcD5jIdfyVcyQGGJida09tQhfMZZLkI3CZ0AyxqSlN400vT8Ez8L2IHRBBAgN6ags2fL7g_w_wDSVURdyJhOpex64zd0CqsBORl5dJgT21ihRFsyLeIhxT3w2F-toWaoqB24vBBbgwF5DqiVcMibZrbmHPoefpYMDkiB-prM-g8lFVgHVh9dmBoKeAKh1EKdZFF-meInNll30nHm2fH_-8C5KYftsYpmXd0voib-UdXFfA1R4GnKZSShECQ-WYq_3TEZjUN0yDmmjw2sKBTPzAwYvDX6Dbw5SgjOg_b8ZAAGGm4XfuwCVvQ"
+#API_LOCATION
+#ENV_ID
+#WORKER_APP_ACCESS_TOKEN
 
 SAMPLE_APP_1=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select(.name=="Demo App - Self-Service Registration") | .name')
