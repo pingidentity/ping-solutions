@@ -7,17 +7,16 @@
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 
-
 #################################
 #Get the default population ID
-SELF_POP_ID=$(curl --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+SELF_POP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 | jq -rc '._embedded.populations[] | select(.name=="Sample Users") | .id')
 
 #create the new self-reg policy
 echo "Creating self-registration policy"
 
-SELF_POL_CREATE=$(curl --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
+SELF_POL_CREATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 --data-raw '{
@@ -31,7 +30,7 @@ SELF_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Self-Registration_Login_Policy") | .id')
 
-#Create the self-reg action 
+#Create the self-reg action
 SELF_ACTION_CREATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies/$SELF_POL_ID/actions" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -52,7 +51,7 @@ SELF_ACTION_CREATE=$(curl -s --location --request POST "$API_LOCATION/environmen
 #moving on
 echo "Creating passwordless SMS policy"
 #create the new SMS auth policy
-SMS_POL_CREATE=$(curl --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
+SMS_POL_CREATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 --data-raw '{
@@ -66,7 +65,7 @@ SMS_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_I
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Passwordless_SMS_Login_Policy") | .id')
 
-#Create the SMS action 
+#Create the SMS action
 SMS_ACTION_CREATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies/$SMS_POL_ID/actions" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -112,7 +111,7 @@ ALL_MFA_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$E
 | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Passwordless_Any_Method_Login_Policy") | .id')
 
 
-#Create the passwordless action 
+#Create the passwordless action
 ALL_MFA_ACTION_CREATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies/$ALL_MFA_POL_ID/actions" \
 --header 'Content-Type: application/json' \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
