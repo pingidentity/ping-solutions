@@ -57,8 +57,5 @@ describe('Check if Sample SAML applications are assigned to CIAM policies', () =
       //sign off
       cy.get('[data-id="account"]').click();
       cy.get('[data-id="signoff.link"]').click();
-      //sign off
-      cy.get('[data-id="account"]').click();
-      cy.get('[data-id="signoff.link"]').click();
     })
 })
