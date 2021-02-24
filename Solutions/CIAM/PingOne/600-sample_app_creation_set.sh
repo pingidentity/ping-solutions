@@ -2,9 +2,9 @@
 
 # configure PingOne Sample SAML Apps for CIAM
 #Variables needed to be passed for this script:
-API_LOCATION="https://api.pingone.com/v1"
-ENV_ID="ae276c77-af5c-4ae5-a82d-be219cf1b6ea"
-WORKER_APP_ACCESS_TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6ImRlZmF1bHQifQ.eyJjbGllbnRfaWQiOiJhNjlhNTY5Yy03YjI4LTQwMmItOGUyOC00NTBmOTAzYTVjZWYiLCJpc3MiOiJodHRwczovL2F1dGgucGluZ29uZS5jb20vYWUyNzZjNzctYWY1Yy00YWU1LWE4MmQtYmUyMTljZjFiNmVhL2FzIiwiaWF0IjoxNjE0MTkwMjQ0LCJleHAiOjE2MTQxOTM4NDQsImF1ZCI6WyJodHRwczovL2FwaS5waW5nb25lLmNvbSJdLCJlbnYiOiJhZTI3NmM3Ny1hZjVjLTRhZTUtYTgyZC1iZTIxOWNmMWI2ZWEiLCJvcmciOiIyMDQ4YjAxZC0xMjFlLTRiZWEtODc1MC1kMzNkZTY4ZmQ2ZGUifQ.XfJWYwqopSl9VMjjfbos3KkKrPLfl_wQv_m7Fw9iwWaTaehO1JHmqi3f35ARXd1Wu0YVwH5XljtW03W124QaotaCX_q-fwpHWhCHQ4qEvlEI79RmvFbYLKIquN58wZ1PRrSAJp_TzaOKIlOiOr0GBzvC708bQ8WEqyrj_vUSJW-V7tBcl_cb4kxqnmyqpgig1HMv3y9f36BdScgjSCsW9k8p0s6cxLB95SnLSXxRsjk63Yfz7SM3HsxIDQYUcuof65n17QZ07YFiRVyHIyVdkiJc1pHwnri6bW8g0E9tlE7YB0XdbqW6wbh49h8ESgOp9Kb1MTKYS3xAMg2BOoU2AQ"
+#API_LOCATION
+#ENV_ID
+#WORKER_APP_ACCESS_TOKEN
 
 SIGNING_KEY_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/keys" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.keys[] | select(.usageType=="SIGNING") | .id')
