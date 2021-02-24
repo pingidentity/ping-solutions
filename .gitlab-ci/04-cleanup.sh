@@ -2,7 +2,7 @@
 # Script to test PingOne instance against trial specifications
 
 #setup the env name
-export ENV_NAME=$( date +"RUNNER_ENV_"%Y%m%d )
+export ENV_NAME=$(cat ./.gitlab-ci/cypress.d/ENV_NM.txt)
 #set Ping One variables for WF variable sub
 export CLIENT_ID=$(cat ./.gitlab-ci/cypress.d/WF_client_id.txt)
 export CLIENT_SECRET=$(cat ./.gitlab-ci/cypress.d/WF_client_secret.txt)

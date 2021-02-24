@@ -31,7 +31,9 @@ DEVOPS
 #WORKFORCEEEEEEEEEEE
 
 #setup the env name. echoing because something might not be set?
-export ENV_NAME=$( date +"RUNNER_ENV_"%Y%m%d )
+#using the cypress.d directory due to persisting between stages. Using epoch time for uniqueness.
+date +"RUNNER_ENV_"%s > ./.gitlab-ci/cypress.d/ENV_NM.txt
+export ENV_NAME=$(cat ./.gitlab-ci/cypress.d/ENV_NM.txt)
 if [ -z ${ENV_NAME+x} ]; then echo "Console password is unset" && exit 1; else echo "Environment name is $ENV_NAME"; fi
 if [ -z ${ADMIN_ENV_ID+x} ]; then echo "Console password is unset" && exit 1; else echo "Admin Environment ID is $ADMIN_ENV_ID"; fi
 if [ -z ${CONSOLE_USERNAME+x} ]; then echo "Console password is unset" && exit 1; else echo "Console user is $CONSOLE_USERNAME"; fi
@@ -83,7 +85,7 @@ fi
 
 echo "Launching Docker to set up environment"
 
-docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run 
+docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:$CYPRESS_VERSION --browser chrome run 
 #docker run $DOCKER_RUN_OPTIONS --ipc=host -v $PWD/.gitlab-ci/cypress.d:/e2e -w /e2e -entrypoint=cypress cypress/included:6.3.0 --browser chrome run --record --key $CYPRESS_RECORD_KEY
 
 

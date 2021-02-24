@@ -35,6 +35,7 @@ configure-solution:
     artifacts:
       paths:
         - "./.gitlab-ci/cypress.d/"
+        - "/var/lib/docker/overlay2/"
 
 test-configured-state:
     stage: 01-configured-test
