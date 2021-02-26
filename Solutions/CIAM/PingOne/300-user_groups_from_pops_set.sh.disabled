@@ -10,30 +10,36 @@
 SAMPLE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Sample Users") | .id')
 
+# get More Sample Users population
+MORE_SAMPLE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="More Sample Users") | .id')
+
 # check if sample users population is present, create groups based on sample users population
-if [[ -z "$SAMPLE_USERS_POP" ]] || [[ "$SAMPLE_USERS_POP" == "" ]]; then
-    echo "Sample Users population does not exist initially, proceeding..."
+if [[ -z "$SAMPLE_USERS_POP" ]] || [[ -z "$MORE_SAMPLE_USERS_POP" ]]; then
+    echo "Sample Users populations do not exist initially, exiting..."
+    exit 0
 else
     # making sure sample users population ID contains no whitespace
     SAMPLE_USERS_POP_ID=$(echo $SAMPLE_USERS_POP | sed -e 's/ //g' )
     echo "Sample Users population found. Adding these users to Sample Group..."
 
-    # create sample group based on Sample Users population
-    CREATE_SAMPLE_GROUP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/groups" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-    --header 'Content-Type: application/json' \
+    # update sample employee population to be called Contractors Population
+    SAMPLE_USERS_POP_UPDATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/populations/$SAMPLE_USERS_POP" \
+    --header 'content-type: application/json' \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
     --data-raw '{
-        "name" : "Sample Group",
-        "description" : "This is a sample group based on the Sample Users population.",
-        "userFilter": "population.id eq \"'"$SAMPLE_USERS_POP_ID"'\""
+    "name" : "Contractors Population",
+    "description" : "Contractors Population"
     }')
 
     # check response code
     CREATE_SAMPLE_GROUP_RESULT=$(echo $CREATE_SAMPLE_GROUP | sed 's@.*}@@' )
-    if [ $CREATE_SAMPLE_GROUP_RESULT == "201" ] ; then
+    if [ $CREATE_SAMPLE_GROUP_RESULT == "200" ] ; then
 
         # check sample group name
-        CHECK_SAMPLE_GROUP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/groups?filter=name%20eq%20%22Sample%20Group%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        | jq -rc '._embedded.groups[] | select (.name=="Sample Group") | .name')
+        CHECK_SAMPLE_GROUP=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/populations/$SAMPLE_USERS_POP" \
+        --header 'content-type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 
         # check if sample group matches expected name, verifying sucessful creation
         if [ "$CHECK_SAMPLE_GROUP" == "Sample Group" ]; then
@@ -47,9 +53,7 @@ else
     fi
 fi
 
-# get More Sample Users population
-MORE_SAMPLE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="More Sample Users") | .id')
+
 
 # check if more sample users population is present, create groups based on more sample users population
 if [[ -z "$MORE_SAMPLE_USERS_POP" ]] || [[ "$MORE_SAMPLE_USERS_POP" == "" ]]; then
