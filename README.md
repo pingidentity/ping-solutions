@@ -1,4 +1,3 @@
-
 # CIAM and Workforce Base Pre-Prod Solution
 
   
@@ -9,6 +8,7 @@
 
 This repo is a WIP for configuring demo environments within PingOne and Ping Federate. The repo does provide a method of configuring via local scripts and a Docker image utilizing Cypress to perform the initial configuration of new environment(s).
 
+* **NOTE**: This tool is not "production ready". While this can be used to test the current working solution to stand up and configure a working demo Workforce or CIAM instance, during configuration sensitive information will be stored in text files within the _.gitlab_ directory. This information is purged at the end of script, but please take care to safeguard your information.
   
 
 ## Deploying via local script
