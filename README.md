@@ -79,9 +79,7 @@ From Home, you should have either a CIAM_DEMO_ENV_##########, WF_DEMO_ENV_######
 
 ### 1. How to remove the CIAM/Workforce Base Pre-Prod solution from your PingOne:
 
-#### a. Clone this repo using `git@github.com:pingidentity/ping-solutions.git`.
-#### b. cd into your newly cloned repo.
-#### c.  Execute the configuration script using the following command:
+#### a.  Execute the configuration script using the following command:
 $`./Solutions/user_scripts/ENV_MANAGER.sh`
 * You will be prompted with the environment name you wish to delete
 ```
