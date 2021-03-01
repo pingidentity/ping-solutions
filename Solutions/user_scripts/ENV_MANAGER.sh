@@ -43,12 +43,10 @@ echo "Username set to: $CONSOLE_USERNAME"
 
 echo ' '
 
-echo "Please enter your PingOne username"
+echo "Please enter your PingOne password"
 if [ -z ${CONSOLE_PASSWORD+x} ]; 
 then 
-read -s -p "Console password is unset. 
-If using a Mac we recommend using Apple's secure keychain if not currently https://ss64.com/osx/security.html to safely store passwords at the command line.
-Enter PingOne password: " NEW_CON_PASS
+read -s -p "Enter PingOne password: " NEW_CON_PASS
 else 
 read -s -p "Console password is set. Press enter to bypass or enter new password value.
 If using a Mac we recommend using Apple's secure keychain if not currently https://ss64.com/osx/security.html to safely store passwords at the command line.
