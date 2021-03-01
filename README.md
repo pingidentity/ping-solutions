@@ -6,7 +6,7 @@
 
   
 
-This repo is a WIP for configuring demo environments within PingOne and Ping Federate. The repo does provide a method of configuring via local scripts and a Docker image utilizing Cypress to perform the initial configuration of new environment(s).
+This repo is a WIP for configuring demo environments within PingOne and Ping Federate. The repo provides a method of configuring PingOne via local scripts and a Docker image utilizing Cypress to perform the initial configuration of new environment(s).
 
 * **NOTE**: This tool is not "production ready". While this can be used to test the current working solution to stand up and configure a working demo Workforce or CIAM instance, during configuration sensitive information will be stored in text files within the _.gitlab_ directory. This information is purged at the end of script, but please take care to safeguard your information.
   
@@ -15,8 +15,8 @@ This repo is a WIP for configuring demo environments within PingOne and Ping Fed
 
   ### Prerequisites:
   * Docker (https://docs.docker.com/get-docker/)
-  * Bash (Linux, MacOs, etc.)
-  * Environment ID from URL used to log into console after "env=" (i.e. https://console.pingone.com/?env=########-####-####-####-############)
+  * Bash (Linux, MacOS, etc.)
+  * Environment ID from URL used to log into console after "env=" (i.e. https://console.pingone.com/?env=**########-####-####-####-############**)
 
 ### 1. How to deploy the CIAM/Workforce Base Pre-Prod solution from your PingOne:
 
@@ -32,41 +32,47 @@ $`./Solutions/user_scripts/ENV_MANAGER.sh`
 ping-solutions username$ ./Solutions/user_scripts/ENV_MANAGER.sh
 You can use this utility to setup and configure a new CIAM or Workforce environment within your existing PingOne organization.
 You can also use this tool to delete the created environments.
-Displaying environment values. If current value is correct press [Enter] to continue
-Current organization ID: ########-####-####-####-############
-Organization ID:
-Organization ID set to: ########-####-####-####-############
-------------------------------------------------------------------------------------------------------------------
 This configuration requires an existing environment from your PingOne account which your user account has permissions to create new environments.
+Your environment ID can be found in the URL used to log into console after env= (i.e. https://console.pingone.com/?env=########-####-####-####-############)
 Current environment ID: ########-####-####-####-############
 Environment ID:
 Environment ID set to: ########-####-####-####-############
-------------------------------------------------------------------------------------------------------------------
-Current PingOne username is : YourUsername
+
+Current PingOne username is: YourUsername
 Username:
 Username set to: YourUsername
-------------------------------------------------------------------------------------------------------------------
+
+Please enter your PingOne username
 Console password is set. Press enter to bypass or enter new password value.
 If using a Mac we recommend using Apple's secure keychain if not currently https://ss64.com/osx/security.html to safely store passwords at the command line.
 PingOne password:
-
-------------------------------------------------------------------------------------------------------------------
+lease enter your choice:
 1) Configure
 2) Delete
 3) Quit
 #? 1
 This solution allows for creating a CIAM environment, a Workforce environment, or both
-Type "1" to select CIAM environment, "2" to skip, then press [Enter].
+Type "1" to create a CIAM environment, "2" to skip, then press [Enter].
 1) Yes
 2) No
 #? 1
 CIAM Environment will be configured.
+Default CIAM environment name: CIAM_DEMO_ENV_1614625096.
+If you wish to change the name, please enter a new name below.
+Note: No validation is performed on name uniqueness. Please be careful to ensure name not already in use.
+CIAM Environment Name:
+Environment to be created is CIAM_DEMO_ENV_1614625096
 
-Type "1" to select Workforce environment, "2" to skip, then press [Enter].
+
+Type "1" to create a Workforce environment, "2" to skip, then press [Enter].
 1) Yes
 2) No
 #? 1
 Workforce Environment will be configured.
+Default WF environment name: WF_DEMO_ENV_1614625099.
+If you wish to change the name, please enter a new name below.
+Note: No validation is performed on name uniqueness. Please be careful to ensure name not already in use.
+Workforce Environment Name:
 ```
 
 
