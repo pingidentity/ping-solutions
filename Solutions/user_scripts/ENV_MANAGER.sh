@@ -134,6 +134,7 @@ do
                 wf_files="$script_dir/.gitlab-ci/cypress.d/CIAM*.txt"
                 rm $wf_files
             fi
+            echo "Environment(s) configured, please visit https://console.pingone.com/?env=$ADMIN_ENV_ID to view the new solution."
             #done, woo!
             break
             ;;
@@ -154,6 +155,7 @@ do
             fi
             echo "Deleting environment(s)"
             bash "$script_dir/.gitlab-ci/04-cleanup.sh"
+            echo "Environment successfully removed."
             break
             ;;
         "Quit")
