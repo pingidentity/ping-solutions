@@ -77,7 +77,7 @@ Workforce Environment will be configured.
 
 From Home, you should have either a CIAM_DEMO_ENV_##########, WF_DEMO_ENV_##########, or both *(where # is a random sequence of numbers)*.
 
-### 1. How to remove the CIAM/Workforce Base Pre-Prod solution from your PingOne:
+### 3. How to remove the CIAM/Workforce Base Pre-Prod solution from your PingOne:
 
 #### a.  Execute the configuration script using the following command:
 $`./Solutions/user_scripts/ENV_MANAGER.sh`
