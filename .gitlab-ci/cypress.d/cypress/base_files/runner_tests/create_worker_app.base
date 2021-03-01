@@ -30,12 +30,21 @@ describe('Create worker app', () => {
         cy.get('#username').type('TEST_USERNAME');
         cy.get('#password').type('TEST_PASSWORD');
         cy.get('.button').click();
-        cy.get('[data-id="guide-close-button"]').click();
+        if(cy.url().should('not.include', '/myping/home'))
+        {
+            cy.log('Warning, could not log in successfully')
+        }        
+        //conditionally click
+        if(cy.get('[data-id="guide-close-button"]').should('be.visible'))
+        {
+          cy.get('[data-id="guide-close-button"]').click();
+        }
         //select new environment
         cy.get('.nav-sidebar__top-container').click();
         cy.get('.astro-environment-selector__trigger').click();
-        cy.get('.astro-environment-selector__environment').contains('ENV_NM').click();
-
+        cy.get('.astro-environment-selector__environment').contains('ENV_NM').should((elem) => {
+            expect(elem.text()).to.equal('ENV_NM');
+        }).click();
         cy.get('[data-id="sidebar-section_connections"]').click();
         cy.get('[data-id="sidebar-node_applications"]').click();
         cy.getIframeBody().find('[data-id="add-app-button"]').click();
