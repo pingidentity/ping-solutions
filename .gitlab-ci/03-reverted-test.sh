@@ -42,9 +42,9 @@ if [ $CONFIGURE_WF = true ]; then
 
     echo "Performing tests on reverted state."
     echo "Running variable substitution..."
-    for script in "$script_dir"/cypress.d/cypress/base_files/WF/*revert.base; do
+    for script in "$script_dir"/cypress.d/cypress/base_files/WF/*revert.js; do
         echo "Modifying $script..."
-        new_script_nm=$(echo $script | sed -e "s/revert.base/revert.js/g" -e "s@base_files@integration@g")
+        new_script_nm=$(echo $script | sed -e "s@base_files@integration@g")
         cat $script | \
         sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" > \
         "$new_script_nm"
@@ -59,9 +59,9 @@ if [ $CONFIGURE_CIAM = true ]; then
 
     #echo "Performing tests on configured state."
     echo "Performing CIAM variable substitution..."
-    for script in "$script_dir"/cypress.d/cypress/base_files/CIAM/*revert.base; do
+    for script in "$script_dir"/cypress.d/cypress/base_files/CIAM/*revert.js; do
         echo "Executing $script..."
-        new_script_nm=$(echo $script | sed -e "s/revert.base/revert.js/g" -e "s@base_files@integration@g")
+        new_script_nm=$(echo $script | sed -e "s@base_files@integration@g")
         cat $script | \
         sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" > \
         "$new_script_nm"
@@ -69,7 +69,7 @@ if [ $CONFIGURE_CIAM = true ]; then
 fi
 
 
-cat "$script_dir/cypress.d/cypress/base_files/runner_tests/cypress.json.base" | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$script_dir/cypress.d/cypress.json"
+cat "$script_dir/cypress.d/cypress/base_files/env_files/cypress.json.base" | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$script_dir/cypress.d/cypress.json"
 
 
 DOCKER_RUN_OPTIONS="-i --rm"

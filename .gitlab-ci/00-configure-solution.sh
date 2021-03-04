@@ -5,6 +5,10 @@
 script_dir="$(cd "$(dirname "$0")"; pwd)"
 #set the solution directory
 sol_dir="$(cd "$(dirname "$0")";cd ../Solutions; pwd)"
+#cleanup in case of failure
+find "$script_dir/cypress.d/cypress/integration/" -name *.js -type f -delete
+find "$script_dir" -name *.txt -type f -delete
+
 
 #Let's set up some variables in case someone new is running this. Much of this is done by pipeline or other resources
 if [ -z ${API_LOCATION+x} ]; then 
@@ -24,8 +28,15 @@ if [ -z ${CYPRESS_PROJECT_ID+x} ]; then
   export CYPRESS_PROJECT_ID='null'
 fi
 
-#WORKFORCEEEEEEEEEEE
+if [[ $CONSOLE_USERNAME == "PDSolutions" ]]; then
+  PING_LICENSE="INTERNAL"
+elif [[ $CONSOLE_USERNAME == *"@pingidentity.com" ]]; then
+  PING_LICENSE="INTERNAL"
+elif [[ $CONSOLE_USERNAME != *"@pingidentity.com" ]]; then
+  PING_LICENSE="PingOne for Customers Trial"
+fi
 
+#WORKFORCEEEEEEEEEEE
 #setup the env name. echoing because something might not be set?
 #using the cypress.d directory due to persisting between stages. Using epoch time for uniqueness.
 if [[ $CONFIGURE_WF = true ]]; then
@@ -69,11 +80,11 @@ echo "Performing variable substitution"
 if [[ $CONFIGURE_WF = true ]]; then
   echo "Setting up P14C environment"
 
-  cat "$script_dir/cypress.d/cypress/base_files/runner_tests/create_env.base" | \
-  sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" > \
+  cat "$script_dir/cypress.d/cypress/base_files/env_files/create_env.js" | \
+  sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" -e "s/LIC_TYPE/$PING_LICENSE/g" > \
   "$script_dir/cypress.d/cypress/integration/WF/02-create_wf_env.js"
 
-  cat "$script_dir/cypress.d/cypress/base_files/runner_tests/create_worker_app.base" | \
+  cat "$script_dir/cypress.d/cypress/base_files/env_files/create_worker_app.js" | \
   sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" -e "s/PROD_NM/WF/g" > \
   "$script_dir/cypress.d/cypress/integration/WF/03-create_wf_worker_app.js"
 fi
@@ -81,16 +92,16 @@ fi
 #adding logic to allow choosing just WF or CIAM
 if [[ $CONFIGURE_CIAM = true ]]; then
 
-  cat "$script_dir/cypress.d/cypress/base_files/runner_tests/create_env.base" | \
-  sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" > \
+  cat "$script_dir/cypress.d/cypress/base_files/env_files/create_env.js" | \
+  sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" -e "s/LIC_TYPE/$PING_LICENSE/g" > \
   "$script_dir/cypress.d/cypress/integration/CIAM/04-create_ciam_env.js"
 
-  cat "$script_dir/cypress.d/cypress/base_files/runner_tests/create_worker_app.base" | \
+  cat "$script_dir/cypress.d/cypress/base_files/env_files/create_worker_app.js" | \
   sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" -e "s/PROD_NM/CIAM/g" > \
   "$script_dir/cypress.d/cypress/integration/CIAM/05-create_ciam_worker_app.js"
 fi
 
-cat "$script_dir/cypress.d/cypress/base_files/runner_tests/cypress.json.base" | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$script_dir/cypress.d/cypress.json"
+cat "$script_dir/cypress.d/cypress/base_files/env_files/cypress.json.base" | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$script_dir/cypress.d/cypress.json"
 
 
 #lets crash and burn here if these don't exist
@@ -165,6 +176,14 @@ if [[ $CONFIGURE_WF = true ]]; then
     echo "Executing $script..."
     bash $script 
   done
+  
+  #delete worker app
+  if [[ $ENV_SCRIPT_CALLED == true ]];then
+    WORKER_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
+          --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="app_runner_worker") | .id')
+    curl -s --location --request DELETE "$API_LOCATION/environments/$ENV_ID/applications/$WORKER_APP_ID" \
+      --header 'Content-Type: application/json' --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" --data-raw ''
+  fi
 fi
 #CCCCCCCCIIIIIIIIIAAAAAAAAAMMMMMMMMM
 
@@ -202,4 +221,12 @@ if [[ $CONFIGURE_CIAM = true ]]; then
     echo "Executing $script..."
     bash $script 
   done
+
+  #delete worker app if run by env_script
+  if [[ $ENV_SCRIPT_CALLED == true ]];then
+    WORKER_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
+          --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="app_runner_worker") | .id')
+    curl -s --location --request DELETE "$API_LOCATION/environments/$ENV_ID/applications/$WORKER_APP_ID" \
+      --header 'Content-Type: application/json' --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" --data-raw ''
+  fi
 fi

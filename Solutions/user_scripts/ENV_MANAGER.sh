@@ -6,6 +6,9 @@ files_removed=$(echo "$script_dir/.gitlab-ci")
 find "$files_removed/cypress.d/cypress/integration/" -name *.js -type f -delete
 find "$files_removed" -name *.txt -type f -delete
 
+#set if ENV_MANAGER.sh called actions
+export ENV_SCRIPT_CALLED=true
+
 #user's shouldn't need to modify, but if you wish to test against another version of cypress, update this version
 if [ -z ${CYPRESS_VERSION+x} ]; then
     #not set, let's do it!

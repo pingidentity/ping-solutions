@@ -27,12 +27,17 @@ PASS_POL_SET=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID
       "excludesProfileData" : true,
       "notSimilarToCurrent" : true,
       "excludesCommonlyUsed" : true,
+      "maxRepeatedCharacters": 2,
       "minComplexity" : 7,
       "maxAgeDays" : 182,
       "minAgeDays" : 1,
       "history" : {
         "count" : 6,
         "retentionDays" : 365
+      },
+      "length": {
+        "min": 8,
+        "max": 255
       },
       "lockout" : {
         "failureCount" : 5,

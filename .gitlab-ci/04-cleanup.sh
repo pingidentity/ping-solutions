@@ -35,7 +35,7 @@ if [[ $CONFIGURE_WF = true ]]; then
     #"Note: If pipeline does not succeed this may error if things are not already configured, we want to run it regardless just in case."
 
     echo "Running WF variable substitution..."
-    cat "$script_dir"/cypress.d/cypress/base_files/runner_tests/delete_env.base | \
+    cat "$script_dir"/cypress.d/cypress/base_files/env_files/delete_env.base | \
     sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" -e "s/PROD_NM/WF/g" > \
     "$script_dir"/cypress.d/cypress/integration/WF/01-delete_WF_env.js
 fi
@@ -46,7 +46,7 @@ if [[ $CONFIGURE_CIAM = true ]]; then
     export CIAM_ENV_NAME=$(cat "$script_dir"/cypress.d/CIAM_ENV_NAME.txt)
 
     echo "Running CIAM variable substitution..."
-    cat "$script_dir"/cypress.d/cypress/base_files/runner_tests/delete_env.base | \
+    cat "$script_dir"/cypress.d/cypress/base_files/env_files/delete_env.base | \
     sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" -e "s/PROD_NM/CIAM/g" > \
     "$script_dir"/cypress.d/cypress/integration/CIAM/02-delete_CIAM_env.js
 fi
@@ -57,12 +57,12 @@ if [ -z ${CONFIGURE_WF+x} ] && [ -z ${CONFIGURE_CIAM+x} ]; then
     export WF_ENV_NAME=$(cat "$script_dir"/cypress.d/WF_ENV_NAME.txt)
 
     echo "Running variable substitution..."
-    cat "$script_dir"/cypress.d/cypress/base_files/runner_tests/delete_env.base | \
+    cat "$script_dir"/cypress.d/cypress/base_files/env_files/delete_env.base | \
     sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" -e "s/PROD_NM/WF/g" > \
     "$script_dir"/cypress.d/cypress/integration/WF/01-delete_env.js
 fi
 
-cat "$script_dir"/cypress.d/cypress/base_files/runner_tests/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$script_dir"/cypress.d/cypress.json
+cat "$script_dir"/cypress.d/cypress/base_files/env_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$script_dir"/cypress.d/cypress.json
 
 DOCKER_RUN_OPTIONS="-i --rm"
 # Only allocate tty if we detect one

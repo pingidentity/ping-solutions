@@ -56,16 +56,3 @@ ALL_MFA_POL_DEL=$(curl -s --location --request DELETE "$API_LOCATION/environment
 MFA_POL_DEL=$(curl -s --location --request DELETE "$API_LOCATION/environments/$ENV_ID/signOnPolicies/$MFA_POL_ID" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 --data-raw '')
-
-
-#make sure Single is default again
-SFA_POL_DEF=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies/" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-| jq -r '._embedded.signOnPolicies[] | select(.name=="Single_Factor") | .default')
-
-if [ "$SFA_POL_DEF" == "true" ]; then
-    echo "Single_Factor Auth policy has been set to default..."
-  else
-    echo "Single_Factor Auth not set successfully!"
-    exit 1
-  fi

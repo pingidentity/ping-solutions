@@ -203,25 +203,3 @@ MFA_ACTION_CREATE=$(curl -s --location --request POST "$API_LOCATION/environment
       "enabled": true
     }
   }')
-
-#set the new policy to default
-MFA_POL_DEFAULT=$(curl -s --location --request PUT "$API_LOCATION/environments/$ENV_ID/signOnPolicies/$MFA_POL_ID" \
---header 'Content-Type: application/json' \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
---data-raw '{
-  "name": "Demo_Multi_Factor_Login_Policy",
-  "default": "true",
-  "description": "A sign-on policy that requires primary username and password along with pre-configured additions for Demo purposes"
-}')
-
-#make sure new is default
-MFA_POL_DEF=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies/" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-| jq -r '._embedded.signOnPolicies[] | select(.name=="Demo_Multi_Factor_Login_Policy") | .default')
-
-if [ "$MFA_POL_DEF" == "true" ]; then
-    echo "Demo Multi Factor Auth has been set to default..."
-  else
-    echo "Demo Multi Factor Auth not set successfully!"
-    exit 1
-  fi

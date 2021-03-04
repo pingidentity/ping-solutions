@@ -1,11 +1,3 @@
-Cypress.on('uncaught:exception', (err, runnable) => {
-    // returning false here prevents Cypress from
-    // failing the test
-    // sign in caused problems without this... I don't care, it still fails if we messed something up.
-    expect(err.message).to.include('error originated from your application code');
-    return false
-})
-
 Cypress.Commands.add('getIframeBody', () => {
     // get the iframe > document > body
     // and retry until the body element is not empty
@@ -21,6 +13,13 @@ Cypress.Commands.add('getIframeBody', () => {
 
 describe('Creating new P14C environment', () => {
     it('Visits ENV_NM PingOne Console and creates base environment', () => {
+      Cypress.on('uncaught:exception', (err, runnable) => {
+        // returning false here prevents Cypress from
+        // failing the test
+        // sign in caused problems without this... I don't care, it still fails if we messed something up.
+        expect(err.message).to.include('error originated from your application code');
+        return false
+    })
       cy.visit('https://console.pingone.com/?env=ENV_ID');
       //login
       cy.get('#username').type('TEST_USERNAME');
@@ -64,8 +63,9 @@ describe('Creating new P14C environment', () => {
       cy.getIframeBody().find('#name').type("ENV_NM");
       cy.getIframeBody().find('[data-id="sample-data-checkbox"]').click();
       cy.getIframeBody().find('#description').type(". Demo environment generated using Cypress.io.");
-      //we need to make sure the correct license is selected.
-      cy.getIframeBody().find('select[id=license] > option').contains('INTERNAL').then(element => cy.getIframeBody().find('#license').select(element.val()))
+      cy.getIframeBody().find('#license').select('None');
+      //we need to make sure the correct license is selected. Will need work to work with a P1 trial license.
+      cy.getIframeBody().find('select[id=license] > option').contains('LIC_TYPE').then(element => cy.getIframeBody().find('#license').select(element.val()))
       cy.getIframeBody().find('[data-id="finish.btn"]').click();
       //get on out of here!
       cy.get('[data-id="account"]').click();
