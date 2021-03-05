@@ -100,14 +100,14 @@ USER_SCHEMA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$E
 
 # check, delete PingFed Admin Role
 CHECK_ADMIN_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-roles") | .enabled')
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .enabled')
 
 if [ "$CHECK_ADMIN_ATTRIBUTE" == "true" ]; then
     echo "PingFederate Admin attribute present, removing..."
 
     # get admin attribute ID
     ADMIN_ATTRIBUTE_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-roles") | .id')
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .id')
 
     # remove PingFed Admin Role attribute
     DELETE_PF_ADMIN_ATTRIBUTE=$(curl -s --write-out "%{http_code}\n" --location --request DELETE "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes/$ADMIN_ATTRIBUTE_ID" \
