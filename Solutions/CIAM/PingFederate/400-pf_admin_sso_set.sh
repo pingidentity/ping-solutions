@@ -3,11 +3,11 @@
 # configure PingOne for PingFed Admin SSO
 
 #Variables needed to be passed for this script:
-API_LOCATION="https://api.pingone.com/v1"
-ENV_ID="ae276c77-af5c-4ae5-a82d-be219cf1b6ea"
-WORKER_APP_ACCESS_TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6ImRlZmF1bHQifQ.eyJjbGllbnRfaWQiOiJhNTdiYTkyMS1iNDAzLTQ0NWMtOTRiMi1kMTJkZTg5YjUzYmUiLCJpc3MiOiJodHRwczovL2F1dGgucGluZ29uZS5jb20vYWUyNzZjNzctYWY1Yy00YWU1LWE4MmQtYmUyMTljZjFiNmVhL2FzIiwiaWF0IjoxNjE0ODk0MTgyLCJleHAiOjE2MTQ4OTc3ODIsImF1ZCI6WyJodHRwczovL2FwaS5waW5nb25lLmNvbSJdLCJlbnYiOiJhZTI3NmM3Ny1hZjVjLTRhZTUtYTgyZC1iZTIxOWNmMWI2ZWEiLCJvcmciOiIyMDQ4YjAxZC0xMjFlLTRiZWEtODc1MC1kMzNkZTY4ZmQ2ZGUifQ.UQ4mS1L0I7-aLROYu3pp4J2jzKFs08fjRd0HJQAHd5Im0t3Q0xE7Vynjnw7IbjkXmNEm7nEzQruMQXsXgRnWY23NF_bbq4iWnyS92XMGI47lL10xnml_cEa9oO5mFRRiU8OabcWR8zohEiCQKLWjbabAOYu3K72jcamNos2R0b9OD7zcJsjfu_j86bKMLVsMnriV4PKDmh85mVxqHAfUpEbqpGqCiAlVEv3T0WgJ4VZBoItSGVNP4tH1yE_l1P3p3fdw9nCvEnDhtvIgHxFdeTXoRWY_81UGsHUz2l9xHGnX9cwoEHoks7GB_IfkAJgIXvLVWTaLBIAOhN2X1TwH3Q"
-PINGFED_BASE_URL="https://localhost"
-DOMAIN="example.com"
+# API_LOCATION
+# ENV_ID
+# WORKER_APP_ACCESS_TOKEN
+# PINGFED_BASE_URL
+# DOMAIN
 
 # set global api call retry limit - this can be set to desired amount, default is 2
 api_call_retry_limit=2
@@ -121,6 +121,12 @@ function check_pf_admin_app_content() {
         # set ID for later
         WEB_OIDC_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .id')
+        if [[ -z "$WEB_OIDC_APP_ID" ]] || [[ "$WEB_OIDC_APP_ID" == "" ]]; then
+            echo "PingFederate Admin SSO app ID unable to be set correctly, retrying..."
+            check_pf_admin_app_content
+        else
+            echo "PingFederate Admin SSO ID set correctly..."
+        fi
     fi
 }
 
@@ -258,33 +264,67 @@ function add_pfadmin_attr() {
 
 add_pfadmin_attr
 
-# # check, create, or set administrator population
-# ADMIN_POP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
-# --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
+#################################### check, create, or set administrator population ####################################
+admin_pop_try=0
 
-# if [ "$ADMIN_POP_NAME" != "Administrators Population" ]; then
-#     # create administrators population
-#     CREATE_ADMIN_POP=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/populations" \
-#     --header 'content-type: application/json' \
-#     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-#     --data-raw '{
-#       "name" : "Administrators Population",
-#       "description" : "Administrators Population"
-#     }')
+function check_admin_pop_content() {
+    # very name again
+    ADMIN_POP_NAME_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
+    if [ "$ADMIN_POP_NAME_AGAIN" == "Administrators Population" ]; then
+        echo "Administrators Population verified, setting population ID..."
+        ADMIN_POP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .id')
+        if [[ -z "$ADMIN_POP_ID" ]] || [[ "$ADMIN_POP_ID" == "" ]]; then
+            echo "Administrator Population ID unable to be set correctly, retrying..."
+            check_admin_pop_content
+        else
+            echo "Administrator Population ID set correctly..."
+        fi
+    else
+        admin_pop_tries_left=$((api_call_retry_limit-admin_pop_try))
+        echo "Unable to verify Administrators population. Retrying $admin_pop_tries_left more time(s)..."
+        check_admin_pop
+    fi
+}
 
-#     ADMIN_POP_NAME_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
-#     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
-#     if [ "$ADMIN_POP_NAME_AGAIN" != "Administrators Population" ]; then
-#         echo "Administrators Population was not successfully created..."
-#         exit 1
-#     fi
-# fi
+function check_admin_pop() {
+    # check name for existence
+    ADMIN_POP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .name')
 
+    if [ "$ADMIN_POP_NAME" != "Administrators Population" ]; then
+        # create administrators population
+        CREATE_ADMIN_POP=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/populations" \
+        --header 'content-type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        --data-raw '{
+        "name" : "Administrators Population",
+        "description" : "Administrators Population"
+        }')
 
-# ADMIN_POP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
-# --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Administrators Population") | .id')
+        CREATE_ADMIN_POP_RESULT=$(echo $CREATE_ADMIN_POP | sed 's@.*}@@')
+        if [[ $CREATE_ADMIN_POP_RESULT == "201" ]]; then
+            echo "Administrators Population added, beginning content check..."
+            check_admin_pop_content
+        elif [[ $CREATE_ADMIN_POP_RESULT != "201" ]] && [[ "$admin_pop_try" < "$api_call_retry_limit" ]]; then
+            admin_pop_try=$((admin_pop_try+1))
+            echo "Administrators Population NOT added! Checking population existence..."
+            check_admin_pop_content
+        else
+            echo "Administrators Population NOT added and attempts to create exceeded!"
+            exit 1
+        fi
 
-# # create PingFederate admin SSO Account
+    else
+        echo "Administrators Population found, verifying..."
+        check_admin_pop_content
+    fi
+}
+
+check_admin_pop
+
+#################################### create PingFederate admin SSO Account ####################################
 # CREATE_ADMIN_ACCOUNT=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/users" \
 # --header 'content-type: application/vnd.pingidentity.user.import+json' \
 # --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -322,7 +362,9 @@ add_pfadmin_attr
 # ADMIN_ACCOUNT_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/users" \
 # --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.users[] | select(.username=="PingFederateAdmin") | .id')
 
-# # get environment admin role id
+
+
+#################################### get environment admin role id ####################################
 # ENV_ADMIN_ROLE_ID=$(curl -s --location --request GET "$API_LOCATION/roles" \
 # --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.roles[] | select(.name=="Environment Admin") | .id')
 
@@ -351,7 +393,7 @@ add_pfadmin_attr
 #     echo "PingFederate Admin environment admin role assigned..."
 # fi
 
-# # export values into oidc properties tmp file
+#################################### export values into oidc properties tmp file ####################################
 
 # # check for existing files
 # OIDC_FILE="./oidc.properties.tmp"
