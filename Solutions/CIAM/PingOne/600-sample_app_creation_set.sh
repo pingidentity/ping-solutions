@@ -9,11 +9,44 @@
 # set global api call retry limit - this can be set to desired amount, default is 2
 api_call_retry_limit=2
 
-# get signing key to assign to all applications
-SIGNING_KEY_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/keys" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.keys[] | select(.usageType=="SIGNING") | .id')
+################## Get certificate signing key ID to assign to all applications ##################
+signing_key_id_try=0
 
-################## create Demo App - Self-Service Registration ##################
+function assign_signing_cert_id() {
+    # checks cert is present
+    SIGNING_CERT_KEYS_RESULT=$(echo $SIGNING_CERT_KEYS | sed 's@.*}@@')
+    if [[ "$SIGNING_CERT_KEYS_RESULT" == "200" ]] && [[ "$signing_key_id_try" < "$api_call_retry_limit" ]] ; then
+        echo "Signing certificate key available, getting ID for signing certificate type..."
+        # get signing cert id
+        SIGNING_KEY_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/keys" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.keys[] | select(.usageType=="SIGNING") | .id')
+        if [ -z "$SIGNING_KEY_ID" ]; then
+            echo "Unable to get signing certificate ID, retrying..."
+            check_signing_cert_keys
+        else
+            echo "Signing certificate key ID set, proceeding..."
+        fi
+    elif [[ $SIGNING_CERT_KEYS_RESULT != "200" ]] && [[ "$signing_key_id_try" < "$api_call_retry_limit" ]]; then
+        signing_key_id_try=$((api_call_retry_limit-signing_key_id_try))
+        echo "Unable to retrieve signing certificate key! Retrying $signing_key_id_try more time(s)..."
+        check_signing_cert_keys
+    else
+        echo "Unable to successfully retrieve a signing certificate key and exceeded try limit!"
+        echo "This must succeed before running additional tasks, exiting..."
+        exit 1
+    fi
+}
+
+function check_signing_cert_keys() {
+    SIGNING_CERT_KEYS=$(curl -s --write-out "%{http_code}\n" --location --request GET "$API_LOCATION/environments/$ENV_ID/keys" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
+    signing_key_id_try=$((signing_key_id_try+1))
+    assign_signing_cert_id
+}
+
+check_signing_cert_keys
+
+################## Create Demo App - Self-Service Registration ##################
 ssr_app_try=0
 
 # verify application content to verify app creation
@@ -28,22 +61,6 @@ function check_ssr_app_content() {
         ssr_checks_remaining=$((api_call_retry_limit-ssr_app_try))
         echo "Attempting to create Self-Service Registration app again. $ssr_checks_remaining remaining after next creation attempt(s)..."
         create_ssr_app
-    fi
-}
-
-function check_ssr_app_creation() {
-    # checks app created, as well as verify expected app name to ensure creation
-    CREATE_SSR_APP_RESULT=$(echo $CREATE_SSR_APP | sed 's@.*}@@')
-    if [ $CREATE_SSR_APP_RESULT == "201" ]; then
-        echo "Self-Service Registration demo app added, beginning content check..."
-        check_ssr_app_content
-    elif [[ $CREATE_SSR_APP_RESULT != "201" ]] && [[ "$ssr_app_try" < "$api_call_retry_limit" ]]; then
-        ssr_app_try=$((ssr_app_try+1))
-        echo "Self-Service Registration demo app NOT added! Checking app existence..."
-        check_ssr_app_content
-    else
-        echo "Self-Service Registration demo app does NOT exist and attempts to create exceeded!"
-        exit 1
     fi
 }
 
@@ -73,15 +90,26 @@ function create_ssr_app() {
         }
     }')
 
-    # call app creation function to do checks
-    check_ssr_app_creation
+    # checks app created, as well as verify expected app name to ensure creation
+    CREATE_SSR_APP_RESULT=$(echo $CREATE_SSR_APP | sed 's@.*}@@')
+    if [ $CREATE_SSR_APP_RESULT == "201" ]; then
+        echo "Self-Service Registration demo app added, beginning content check..."
+        check_ssr_app_content
+    elif [[ $CREATE_SSR_APP_RESULT != "201" ]] && [[ "$ssr_app_try" < "$api_call_retry_limit" ]]; then
+        ssr_app_try=$((ssr_app_try+1))
+        echo "Self-Service Registration demo app NOT added! Checking app existence..."
+        check_ssr_app_content
+    else
+        echo "Self-Service Registration demo app does NOT exist and attempts to create exceeded!"
+        exit 1
+    fi
 }
 
 # call create self-service registration app function above
 create_ssr_app
 
 
-################## create Demo App - Passwordless Login SMS Only ##################
+################## Create Demo App - Passwordless Login SMS Only ##################
 sms_app_try=0
 
 # verify application content to verify app creation
@@ -96,22 +124,6 @@ function check_sms_app_content() {
         sms_checks_remaining=$((api_call_retry_limit-sms_app_try))
         echo "Attempting to create Passwordless Login SMS Only app again. $sms_checks_remaining remaining after next creation attempt(s)"
         create_sms_app
-    fi
-}
-
-# checks app created, as well as verify expected app name to ensure creation
-function check_sms_app_creation() {
-    CREATE_SMS_APP_RESULT=$(echo $CREATE_SMS_APP | sed 's@.*}@@')
-    if [ $CREATE_SMS_APP_RESULT == "201" ] ; then
-        echo "Passwordless Login SMS Only app added, beginning content check..."
-        check_sms_app_content
-    elif [[ $CREATE_SMS_APP_RESULT != "201" ]] && [[ "$sms_app_try" < "$api_call_retry_limit" ]]; then
-        sms_app_try=$((sms_app_try+1))
-        echo "Passwordless Login SMS Only app NOT added! Checking app existence..."
-        check_sms_app_content
-    else
-        echo "Passwordless Login SMS Only app does NOT exist and attempts to create exceeded!"
-        exit 1
     fi
 }
 
@@ -141,13 +153,24 @@ function create_sms_app() {
         }
     }')
 
-    # call app creation function to do checks
-    check_sms_app_creation
+    # checks app created, as well as verify expected app name to ensure creation
+    CREATE_SMS_APP_RESULT=$(echo $CREATE_SMS_APP | sed 's@.*}@@')
+    if [ $CREATE_SMS_APP_RESULT == "201" ] ; then
+        echo "Passwordless Login SMS Only app added, beginning content check..."
+        check_sms_app_content
+    elif [[ $CREATE_SMS_APP_RESULT != "201" ]] && [[ "$sms_app_try" < "$api_call_retry_limit" ]]; then
+        sms_app_try=$((sms_app_try+1))
+        echo "Passwordless Login SMS Only app NOT added! Checking app existence..."
+        check_sms_app_content
+    else
+        echo "Passwordless Login SMS Only app does NOT exist and attempts to create exceeded!"
+        exit 1
+    fi
 }
 # call create sms passwordless app function above
 create_sms_app
 
-################## create Demo App - Passwordless Login Any Method ##################
+################## Create Demo App - Passwordless Login Any Method ##################
 pwdless_app_try=0
 
 # verify application content to verify app creation
@@ -162,22 +185,6 @@ function check_pwdless_app_content() {
         pwdless_checks_remaining=$((api_call_retry_limit-pwdless_app_try))
         echo "Attempting to create Passwordless Login SMS Only app again. $pwdless_checks_remaining remaining after next creation attempt(s)"
         create_pwdless_app
-    fi
-}
-
-function check_pwdless_app_creation() {
-    # checks app created, as well as verify expected app name to ensure creation
-    CREATE_PWDLESS_APP_RESULT=$(echo $CREATE_PWDLESS_APP | sed 's@.*}@@')
-    if [ $CREATE_PWDLESS_APP_RESULT == "201" ] ; then
-        echo "Passwordless Login Any Method app added, beginning content check..."
-        check_pwdless_app_content
-    elif [[ $CREATE_PWDLESS_APP_RESULT != "201" ]] && [[ "$pwdless_app_try" < "$api_call_retry_limit" ]]; then
-        pwdless_app_try=$((pwdless_app_try+1))
-        echo "Passwordless Login Any Method app NOT added! Checking app existence..."
-        check_pwdless_app_content
-    else
-        echo "Passwordless Login Any Method app does NOT exist and attempts to create exceeded!"
-        exit 1
     fi
 }
 
@@ -207,8 +214,19 @@ function create_pwdless_app() {
         }
     }')
 
-    # call app creation function above to do checks
-    check_pwdless_app_creation
+    # checks app created, as well as verify expected app name to ensure creation
+    CREATE_PWDLESS_APP_RESULT=$(echo $CREATE_PWDLESS_APP | sed 's@.*}@@')
+    if [ $CREATE_PWDLESS_APP_RESULT == "201" ] ; then
+        echo "Passwordless Login Any Method app added, beginning content check..."
+        check_pwdless_app_content
+    elif [[ $CREATE_PWDLESS_APP_RESULT != "201" ]] && [[ "$pwdless_app_try" < "$api_call_retry_limit" ]]; then
+        pwdless_app_try=$((pwdless_app_try+1))
+        echo "Passwordless Login Any Method app NOT added! Checking app existence..."
+        check_pwdless_app_content
+    else
+        echo "Passwordless Login Any Method app does NOT exist and attempts to create exceeded!"
+        exit 1
+    fi
 }
 # call create passwordless app function above
 create_pwdless_app
