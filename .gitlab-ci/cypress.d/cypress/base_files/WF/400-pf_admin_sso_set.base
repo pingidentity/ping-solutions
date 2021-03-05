@@ -42,8 +42,8 @@ describe('Check ENV_NM is set to proper configuration for PingFederate Admin SSO
       // go to admin sso attribute, find expected value
       cy.get('[data-id="sidebar-section_users"]').click();
       cy.get('[data-id="sidebar-node_attributes"]').click();
-      cy.getIframeBody().find('[data-id="searchBox-input"]').type('pf-admin-roles');
-      cy.getIframeBody().find('[data-id="scrolling-wrapper"]').contains('pf-admin-roles')
+      cy.getIframeBody().find('[data-id="searchBox-input"]').type('pf-admin-role');
+      cy.getIframeBody().find('[data-id="scrolling-wrapper"]').contains('pf-admin-role')
       // go to admin account
       cy.get('[data-id="sidebar-node_user"]').click();
       cy.getIframeBody().find('[data-id="searchBox-input"]').type('PingFederateAdmin');
@@ -54,7 +54,7 @@ describe('Check ENV_NM is set to proper configuration for PingFederate Admin SSO
       cy.getIframeBody().find('[data-id="app-row"]').contains('PingFederate Admin SSO')
       cy.getIframeBody().find('[data-id="expand-btn"]').click();
       cy.getIframeBody().find('[data-id="rocker-label_ATTRIBUTES"]').click();
-      cy.getIframeBody().find('[data-id="icon-content"]').contains('pf-admin-roles')
+      cy.getIframeBody().find('[data-id="icon-content"]').contains('pf-admin-role')
       //sign off
       cy.get('[data-id="account"]').click();
       cy.get('[data-id="signoff.link"]').click();
