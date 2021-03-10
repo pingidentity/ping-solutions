@@ -9,6 +9,8 @@
 # PINGFED_BASE_URL
 # DOMAIN
 
+
+echo "Beginning 400-pf_admin_sso_set.sh..."
 # set global api call retry limit - this can be set to desired amount, default is 2. Other try variables in script should not be modified
 api_call_retry_limit=2
 
@@ -589,22 +591,25 @@ function write_oidc_file_out {
     APP_AUTHN_METHOD="client_secret_basic"
 
 ### Output variables to OIDC properties file ###
-    echo "client.id=$APP_CLIENT_ID" >> $OIDC_FILE
-    echo "client.authn.method=$APP_AUTHN_METHOD" >> $OIDC_FILE
+    echo "PF_OIDC_CLIENT_ID=$APP_CLIENT_ID" >> $OIDC_FILE
+    echo "PF_OIDC_CLIENT_AUTHN_METHOD=$APP_AUTHN_METHOD" >> $OIDC_FILE
     # the client secret maybe need to be run against obfuscate script in PingFederate
-    echo "client.secret=$APP_CLIENT_SECRET" >> $OIDC_FILE
-    echo "authorization.endpoint=$APP_AUTH_EP" >> $OIDC_FILE
-    echo "token.endpoint=$APP_TOKEN_EP" >> $OIDC_FILE
-    echo "user.info.endpoint=$APP_USERINFO_EP" >> $OIDC_FILE
-    echo "end.session.endpoint=$APP_SO_EP" >> $OIDC_FILE
-    echo "issuer=$APP_ISSUER" >> $OIDC_FILE
-    echo "scopes=$APP_SCOPES" >> $OIDC_FILE
-    echo "username.attribute.name=$APP_USERNAME_ATTRIBUTE" >> $OIDC_FILE
-    echo "role.attribute.name=$APP_ATTR_NAME" >> $OIDC_FILE
-    echo "role.admin=$APP_ROLE_NAME" >> $OIDC_FILE
-    echo "role.cryptoManager=$APP_ROLE_NAME" >> $OIDC_FILE
-    echo "role.userAdmin=$APP_ROLE_NAME" >> $OIDC_FILE
-    echo "role.expressionAdmin=eadmin" >> $OIDC_FILE
+    echo "PF_OIDC_CLIENT_SECRET=$APP_CLIENT_SECRET" >> $OIDC_FILE
+    echo "PF_OIDC_AUTHORIZATION_ENDPOINT=$APP_AUTH_EP" >> $OIDC_FILE
+    echo "PF_OIDC_TOKEN_ENDPOINT=$APP_TOKEN_EP" >> $OIDC_FILE
+    echo "PF_OIDC_USER_INFO_ENDPOINT=$APP_USERINFO_EP" >> $OIDC_FILE
+    echo "PF_OIDC_END_SESSION_ENDPOINT=" >> $OIDC_FILE
+    echo "PF_OIDC_USER_SESSION_ENDPOINT=$APP_SO_EP" >> $OIDC_FILE
+    echo "PF_OIDC_ISSUER=$APP_ISSUER" >> $OIDC_FILE
+    echo "PF_OIDC_ACR_VALUES=" >> $OIDC_FILE
+    echo "PF_OIDC_SCOPES=$APP_SCOPES" >> $OIDC_FILE
+    echo "PF_OIDC_USERNAME_ATTRIBUTE_NAME=$APP_USERNAME_ATTRIBUTE" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_ATTRIBUTE_NAME=$APP_ATTR_NAME" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_ADMIN=$APP_ROLE_NAME" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_CRYPTOMANAGER=$APP_ROLE_NAME" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_USERADMIN=$APP_ROLE_NAME" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_EXPRESSIONADMIN=eadmin" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_AUDITOR=" >> $OIDC_FILE
     echo "oidc.properties.tmp file written..."
 }
 
@@ -655,10 +660,10 @@ function write_prop_file_out {
     admin_env_id
 
 ### Output variables to run properties file ###
-    echo "pf.admin.hostname=$PF_ADMIN_HOSTNAME" >> $RUN_PROP_FILE
-    echo "pf.console.title=$OIDC_APP_NAME" >> $RUN_PROP_FILE
-    echo "pf.console.environment=$ADMIN_ENV_ID" >> $RUN_PROP_FILE
-    echo "pf.console.authentication=OIDC" >> $RUN_PROP_FILE
+    echo "PF_ADMIN_PUBLIC_HOSTNAME=$PF_ADMIN_HOSTNAME" >> $RUN_PROP_FILE
+    echo "PF_ADMIN_CONSOLE_TITLE=$OIDC_APP_NAME" >> $RUN_PROP_FILE
+    echo "PF_ADMIN_CONSOLE_ENVIRONMENT=$ADMIN_ENV_ID" >> $RUN_PROP_FILE
+    echo "AUTHENTICATION_MODE=OIDC" >> $RUN_PROP_FILE
     echo "run.properties.tmp file written..."
 }
 
@@ -673,3 +678,5 @@ else
     echo "No existing properties file, creating now..."
     write_prop_file_out
 fi
+
+echo "End of 400-pf_admin_sso_set.sh..."
