@@ -7,6 +7,8 @@
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 
+echo "------ Beginning 300-user_populations_set.sh ------"
+
 # get Sample Users population name
 SAMPLE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Sample Users") | .name')
@@ -46,7 +48,7 @@ for SAMPLE_POP in "${SAMPLE_POPS[@]}"; do
 
             # check if new sample population matches expected name, verifying sucessful update
             if [ "$SAMPLE_USERS_POP_NAME" == "Contractors" ]; then
-                echo "Sample Users population successfully updated to contractors..."
+                echo "Sample Users population successfully updated to Contractors..."
             else
                 echo "Sample Users population updated, however unable to verify new name change!"
             fi
@@ -89,3 +91,5 @@ for SAMPLE_POP in "${SAMPLE_POPS[@]}"; do
     fi
 done
 echo "Set User Populations checks and tasks completed."
+
+echo "------ End of 300-user_populations_set.sh ------"

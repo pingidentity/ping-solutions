@@ -9,10 +9,10 @@
 # PINGFED_BASE_URL
 # DOMAIN
 
+echo "------ Beginning 400-pf_admin_sso_set.sh ------"
 
-echo "Beginning 400-pf_admin_sso_set.sh..."
 # set global api call retry limit - this can be set to desired amount, default is 2. Other try variables in script should not be modified
-api_call_retry_limit=2
+api_call_retry_limit=1
 
 ################## Get schema ID needed for creating attribute ##################
 user_schema_try=0
@@ -25,15 +25,16 @@ function assign_schema_id() {
         # get signing cert id
         USER_SCHEMA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.schemas[].id')
-        if [ -z "$USER_SCHEMA_ID" ]; then
+        if [[ -z "$USER_SCHEMA_ID" ]] || [[ "$USER_SCHEMA_ID" == "" ]]; then
             echo "Unable to get schema ID, retrying..."
             check_schema
         else
             echo "Schema ID set, proceeding..."
         fi
     elif [[ $SIGNING_CERT_KEYS_RESULT != "200" ]] && [[ "$user_schema_try" < "$api_call_retry_limit" ]]; then
-        signing_key_id_try=$((api_call_retry_limit-user_schema_try))
-        echo "Unable to retrieve schema! Retrying $user_schema_try more time(s) after this attempt..."
+        user_schema_tries=$((api_call_retry_limit-user_schema_try))
+        echo "Unable to retrieve schema! Retrying $user_schema_tries..."
+        user_schema_try=$((user_schema_try+1))
         check_schema
     else
         echo "Unable to successfully retrieve schema and exceeded try limit!"
@@ -44,7 +45,6 @@ function assign_schema_id() {
 function check_schema() {
     USER_SCHEMA=$(curl -s --write-out "%{http_code}\n" --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas" \
     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
-    user_schema_try=$((user_schema_try+1))
     assign_schema_id
 }
 check_schema
@@ -58,7 +58,8 @@ function check_admin_attr_content() {
     | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .enabled')
     if [ "$CHECK_ADMIN_ATTRIBUTE_AGAIN" != "true" ]; then
         admin_attr_tries_left=$((api_call_retry_limit-admin_attr_try))
-        echo "Unable to verify content... Retrying $admin_attr_try more time(s) after this attempt..."
+        echo "Unable to verify content... Retrying $admin_attr_try..."
+        admin_attr_try=$((admin_attr_try+1))
         create_admin_attr
     else
         echo "PingFederate Admin role attribute exists and verified content..."
@@ -90,7 +91,6 @@ function create_admin_attr() {
             echo "PingFederate Admin role attribute added, beginning content check..."
             check_admin_attr_content
         elif [[ $PF_ADMIN_ATTRIBUTE_RESULT != "201" ]] && [[ "$admin_attr_try" < "$api_call_retry_limit" ]]; then
-            ssr_app_try=$((admin_attr_try+1))
             echo "PingFederate Admin role attribute NOT added! Checking app existence..."
             check_admin_attr_content
         else
@@ -113,7 +113,8 @@ function check_pf_admin_app_content() {
     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
     if [ "$CHECK_WEB_OIDC_APP_AGAIN" != "true" ]; then
         admin_app_tries_left=$((api_call_retry_limit-pf_admin_app_try))
-        echo "Unable to verify content... Retrying $admin_app_tries_left more time(s) after this attempt..."
+        echo "Unable to verify content... Retrying $admin_app_tries_left..."
+        pf_admin_app_try=$((pf_admin_app_try+1))
         create_pf_admin_app
     else
         echo "PingFederate Admin SSO app exists and verified content, setting variables to be used for later..."
@@ -172,7 +173,6 @@ function create_pf_admin_app() {
             echo "PingFederate Admin SSO app added, beginning content check..."
             check_pf_admin_app_content
         elif [[ $WEB_OIDC_APP_RESULT != "201" ]] && [[ "$pf_admin_app_try" < "$api_call_retry_limit" ]]; then
-            pf_admin_app_try=$((pf_admin_app_try+1))
             echo "PingFederate Admin SSO app NOT added! Checking app existence..."
             check_pf_admin_app_content
         else
@@ -190,60 +190,14 @@ create_pf_admin_app
 add_name_attr_try=0
 add_pfadmin_attr_try=0
 
-### Add name attribute to PingFederate Admin SSO App ###
-function check_name_attr_content() {
-    CHECK_NAME_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="name") | .name')
-    if [ "$CHECK_NAME_ATTR" != "name" ]; then
-        add_name_attr_try_left=$((api_call_retry_limit-add_name_attr_try))
-        echo "Unable to verify name attribute content, retrying $add_name_attr_try_left more time(s) after this attempt..."
-        add_name_attr
-    else
-        echo "name attribute verified in PingFederate Admin SSO App configuration..."
-    fi
-}
-
-function add_name_attr() {
-    # add name attribute to App
-    NAME_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="name") | .name')
-    if [ "$NAME_ATTR" != "name" ]; then
-        echo "name attribute does not exist in the PingFederateAdmin SSO app configuration, adding now..."
-        APP_NAME_ATTR=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
-        --header 'Content-Type: application/json' \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        --data-raw '{
-            "name": "name",
-            "value": "${user.name.formatted}",
-            "required": true
-        }')
-
-        APP_NAME_ATTR_RESULT=$(echo $APP_NAME_ATTR | sed 's@.*}@@')
-        if [[ $APP_NAME_ATTR_RESULT == "201" ]]; then
-            echo "name attribute added to PingFederate Admin SSO app, beginning content check..."
-            check_name_attr_content
-        elif [[ $APP_NAME_ATTR_RESULT != "201" ]] && [[ "$add_name_attr_try" < "$api_call_retry_limit" ]]; then
-            add_name_attr_try=$((add_name_attr_try+1))
-            echo "name attribute NOT added to PingFederate Admin SSO app! Checking attribute existence..."
-            check_name_attr_content
-        else
-            echo "name attribute NOT added to PingFederate Admin SSO app and attempts to create exceeded!"
-            exit 1
-        fi
-    else
-        echo "name existence check passed, checking content..."
-        check_name_attr_content
-    fi
-}
-add_name_attr
-
 ### Add pf-admin-role attribute to PingFederate Admin SSO App ###
 function check_pfadmin_attr_content() {
     PF_ADMIN_ROLE_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .name')
     if [ "$PF_ADMIN_ROLE_ATTR" != "pf-admin-role" ]; then
         add_name_attr_try_left=$((api_call_retry_limit-add_name_attr_try))
-        echo "Unable to verify pf-admin-role attribute content, retrying $add_name_attr_try_left more time(s) after this attempt..."
+        echo "Unable to verify pf-admin-role attribute content, retrying $add_name_attr_try_left..."
+        add_pfadmin_attr_try=$((add_pfadmin_attr_try+1))
         add_name_attr
     else
         echo "pf-admin-role attribute verified in PingFederate Admin SSO App configuration..."
@@ -270,7 +224,6 @@ function add_pfadmin_attr() {
             echo "pf-admin-role attribute added to PingFederate Admin SSO app, beginning content check..."
             check_pfadmin_attr_content
         elif [[ $APP_PF_ADMIN_ROLE_RESULT != "201" ]] && [[ "$add_pfadmin_attr_try" < "$api_call_retry_limit" ]]; then
-            add_pfadmin_attr_try=$((add_pfadmin_attr_try+1))
             echo "pf-admin-role attribute NOT added to PingFederate Admin SSO app! Checking attribute existence..."
             check_pfadmin_attr_content
         else
@@ -303,7 +256,8 @@ function check_admin_pop_content() {
         fi
     else
         admin_pop_tries_left=$((api_call_retry_limit-admin_pop_try))
-        echo "Unable to verify Administrators population. Retrying $admin_pop_tries_left more time(s) after this attempt..."
+        echo "Unable to verify Administrators population. Retrying $admin_pop_tries_left..."
+        admin_pop_try=$((admin_pop_try+1))
         check_admin_pop
     fi
 }
@@ -328,7 +282,6 @@ function check_admin_pop() {
             echo "Administrators Population added, beginning content check..."
             check_admin_pop_content
         elif [[ $CREATE_ADMIN_POP_RESULT != "201" ]] && [[ "$admin_pop_try" < "$api_call_retry_limit" ]]; then
-            admin_pop_try=$((admin_pop_try+1))
             echo "Administrators Population NOT added! Checking population existence..."
             check_admin_pop_content
         else
@@ -363,8 +316,9 @@ function check_admin_accnt_content() {
             echo "PingFederateAdmin account ID set correctly..."
         fi
     else
-        admin_accnt_tries_left=$((api_call_retry_limit-admin_account_try))
-        echo "Unable to verify PingFederateAdmin account. Retrying $admin_accnt_tries_left more time(s) after this attempt..."
+        admin_account_tries_left=$((api_call_retry_limit-admin_account_try))
+        echo "Unable to verify PingFederateAdmin account. Retrying $admin_account_tries_left..."
+        admin_account_try=$((admin_account_try+1))
         check_admin_accnt
     fi
 }
@@ -405,7 +359,6 @@ function check_admin_accnt() {
             echo "PingFederateAdmin account added, beginning content check..."
             check_admin_accnt_content
         elif [[ $CREATE_ADMIN_ACCOUNT_RESULT != "201" ]] && [[ "$admin_account_try" < "$api_call_retry_limit" ]]; then
-            admin_account_try=$((admin_account_try+1))
             echo "PingFederateAdmin account NOT added! Checking account existence..."
             check_admin_accnt_content
         else
@@ -430,7 +383,8 @@ function check_env_role_content() {
         echo "PingFederateAdmin environment admin role verified..."
     else
         env_role_tries_left=$((api_call_retry_limit-assign_env_role_try))
-        echo "Unable to verify PingFederateAdmin environment admin role. Retrying $env_role_tries_left more time(s) after this attempt..."
+        echo "Unable to verify PingFederateAdmin environment admin role. Retrying $env_role_tries_left..."
+        assign_env_role_try=$((assign_env_role_try+1))
         check_env_role
     fi
 }
@@ -466,7 +420,6 @@ function check_env_role() {
                 echo "PingFederateAdmin environment admin role assigned, beginning content check..."
                 check_env_role_content
             elif [[ $CREATE_ADMIN_ACCOUNT_RESULT != "201" ]] && [[ "$assign_env_role_try" < "$api_call_retry_limit" ]]; then
-                assign_env_role_try=$((assign_env_role_try+1))
                 echo "PingFederateAdmin environment admin role NOT assigned! Checking role assignment existence..."
                 check_env_role_content
             else
@@ -505,7 +458,7 @@ function write_oidc_file_out {
             APP_SCOPES=$( echo "$OIDC_APP_OAUTH_CONTENT" | jq -rc '.scopes_supported' | sed -e 's/\[//g' -e 's/\"/ /g' -e 's/ //g' -e 's/\,/ /g' -e 's/\]//g')
         elif [[ $OIDC_APP_OAUTH_CONTENT_CHECK_RESULT != "200" ]] && [[ "$oauth_cons_try" < "$api_call_retry_limit" ]]; then
             oauth_cons_tries_left=$((api_call_retry_limit-oauth_cons_try))
-            echo "Unable to get openid configuration content, retrying $oauth_cons_tries_left more time(s) after this attempt..."
+            echo "Unable to get openid configuration content, retrying $oauth_cons_tries_left..."
             oauth_cons_try=$((oauth_cons_try+1))
             oidc_content
         else
@@ -525,7 +478,7 @@ function write_oidc_file_out {
             APP_CLIENT_SECRET=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/secret" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.secret')
         elif [[ $APP_CLIENT_SECRET_CHECK_RESULT != "200" ]] && [[ "$client_secret_try" < "$api_call_retry_limit" ]]; then
             client_secret_tries_left=$((api_call_retry_limit-client_secret_try))
-            echo "Unable to retrieve app client secret, retrying $client_secret_tries_left more time(s) after this attempt..."
+            echo "Unable to retrieve app client secret, retrying $client_secret_tries_left..."
             client_secret_try=$((client_secret_try+1))
             client_secret
         else
@@ -546,7 +499,7 @@ function write_oidc_file_out {
             APP_ATTR_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .name' )
         elif [[ $APP_CLIENT_SECRET_CHECK_RESULT != "200" ]] && [[ "$attributes_try" < "$api_call_retry_limit" ]]; then
             attributes_tries_left=$((api_call_retry_limit-attributes_try))
-            echo "Unable to retrieve attributes, retrying $attributes_tries_left more time(s) after this attempt..."
+            echo "Unable to retrieve attributes, retrying $attributes_tries_left..."
             attributes_try=$((attributes_try+1))
             attributes
         else
@@ -566,7 +519,7 @@ function write_oidc_file_out {
             APP_ROLE_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/users/$ADMIN_ACCOUNT_ID?expand=population" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '."pf-admin-role"')
         elif [[ $APP_ROLE_NAME_CHECK_RESULT != "200" ]] && [[ "$role_name_try" < "$api_call_retry_limit" ]]; then
             role_name_tries_left=$((api_call_retry_limit-role_name_try))
-            echo "Unable to retrieve role name, retrying $role_name_tries_left more time(s) after this attempt..."
+            echo "Unable to retrieve role name, retrying $role_name_tries_left..."
             role_name_try=$((role_name_try+1))
             role_name
         else
@@ -603,7 +556,7 @@ function write_oidc_file_out {
     echo "PF_OIDC_ISSUER=$APP_ISSUER" >> $OIDC_FILE
     echo "PF_OIDC_ACR_VALUES=" >> $OIDC_FILE
     echo "PF_OIDC_SCOPES=$APP_SCOPES" >> $OIDC_FILE
-    echo "PF_OIDC_USERNAME_ATTRIBUTE_NAME=$APP_USERNAME_ATTRIBUTE" >> $OIDC_FILE
+    echo "PF_OIDC_USERNAME_ATTRIBUTE_NAME=sub" >> $OIDC_FILE
     echo "PF_OIDC_ROLE_ATTRIBUTE_NAME=$APP_ATTR_NAME" >> $OIDC_FILE
     echo "PF_OIDC_ROLE_ADMIN=$APP_ROLE_NAME" >> $OIDC_FILE
     echo "PF_OIDC_ROLE_CRYPTOMANAGER=$APP_ROLE_NAME" >> $OIDC_FILE
@@ -649,7 +602,7 @@ function write_prop_file_out {
             ADMIN_ENV_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '. | select(.name="Administrators") | .id')
         elif [[ $ADMIN_ENV_ID_CHECK_RESULT != "200" ]] && [[ "$admin_env_try" < "$api_call_retry_limit" ]]; then
             admin_env_tries_left=$((api_call_retry_limit-admin_env_try))
-            echo "Unable to retrieve Administrators Environment, retrying $admin_env_tries_left more time(s) after this attempt..."
+            echo "Unable to retrieve Administrators Environment, retrying $admin_env_tries_left..."
             admin_env_try=$((admin_env_try+1))
             admin_env_id
         else
@@ -663,7 +616,7 @@ function write_prop_file_out {
     echo "PF_ADMIN_PUBLIC_HOSTNAME=$PF_ADMIN_HOSTNAME" >> $RUN_PROP_FILE
     echo "PF_ADMIN_CONSOLE_TITLE=$OIDC_APP_NAME" >> $RUN_PROP_FILE
     echo "PF_ADMIN_CONSOLE_ENVIRONMENT=$ADMIN_ENV_ID" >> $RUN_PROP_FILE
-    echo "AUTHENTICATION_MODE=OIDC" >> $RUN_PROP_FILE
+    echo "PF_CONSOLE_AUTHENTICATION=OIDC" >> $RUN_PROP_FILE
     echo "run.properties.tmp file written..."
 }
 
@@ -679,4 +632,5 @@ else
     write_prop_file_out
 fi
 
-echo "End of 400-pf_admin_sso_set.sh..."
+
+echo "------ End of 400-pf_admin_sso_set.sh ------"
