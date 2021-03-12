@@ -43,7 +43,7 @@ describe('Check ENV_NM is set to proper configuration for High Risk Policy', () 
       cy.get('[data-id="sidebar-section_experiences"]').click();
       cy.get('[data-id="sidebar-node_riskPolicies"]').click();
       //find expected vaule
-      cy.getIframeBody().find('[data-id="expandable-row"]').contains('High Risk Policy');
+      cy.getIframeBody().find('[data-id="expandable-row"]').contains('Default Workforce High Risk Policy');
       //sign off
       cy.get('[data-id="account"]').click();
       cy.get('[data-id="signoff.link"]').click();

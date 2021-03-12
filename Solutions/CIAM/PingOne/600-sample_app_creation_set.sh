@@ -6,8 +6,11 @@
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 
-# set global api call retry limit - this can be set to desired amount, default is 2
-api_call_retry_limit=2
+
+echo "------ Beginning 601-sample_app_pol_set.sh ------"
+
+# set global api call retry limit - this can be set to desired amount, default is 1
+api_call_retry_limit=1
 
 ################## Get certificate signing key ID to assign to all applications ##################
 signing_key_id_try=0
@@ -29,6 +32,7 @@ function assign_signing_cert_id() {
     elif [[ $SIGNING_CERT_KEYS_RESULT != "200" ]] && [[ "$signing_key_id_try" < "$api_call_retry_limit" ]]; then
         signing_key_id_try=$((api_call_retry_limit-signing_key_id_try))
         echo "Unable to retrieve signing certificate key! Retrying $signing_key_id_try more time(s)..."
+        signing_key_id_try=$((signing_key_id_try+1))
         check_signing_cert_keys
     else
         echo "Unable to successfully retrieve a signing certificate key and exceeded try limit!"
@@ -40,7 +44,6 @@ function assign_signing_cert_id() {
 function check_signing_cert_keys() {
     SIGNING_CERT_KEYS=$(curl -s --write-out "%{http_code}\n" --location --request GET "$API_LOCATION/environments/$ENV_ID/keys" \
     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
-    signing_key_id_try=$((signing_key_id_try+1))
     assign_signing_cert_id
 }
 
@@ -230,3 +233,5 @@ function create_pwdless_app() {
 }
 # call create passwordless app function above
 create_pwdless_app
+
+echo "------ End of 600-sample_app_creation_set.sh ------"
