@@ -158,7 +158,7 @@ function create_pf_admin_app() {
                 "AUTHORIZATION_CODE"
             ],
             "redirectUris": [
-                "'"$PINGFED_BASE_URL:9999/pingfederate/app?service=finishsso"'"
+                "'"https://$PINGFED_BASE_URL:443/pingfederate/app?service=finishsso"'"
             ],
             "responseTypes": [
                 "CODE"
