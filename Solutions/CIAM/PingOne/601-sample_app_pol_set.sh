@@ -30,18 +30,11 @@ function assign_ssr_policy_id() {
         else
             echo "Self-Registration_Login_Policy ID set, proceeding..."
         fi
-<<<<<<< HEAD
     elif [[ $POLS_RESULT != "200" ]] && [[ "$self_pol_id_try" < "$api_call_retry_limit" ]] ; then
         self_pol_id_tries=$((api_call_retry_limit-self_pol_id_try))
         echo "Unable to retrieve Self-Registration_Login_Policy! Retrying $self_pol_id_tries more time(s)..."
         self_pol_id_try=$((self_pol_id_try+1))
         check_policies_for_ssr
-=======
-    elif [[ $SELF_POLS_RESULT != "200" ]] && [[ "$self_pol_id_try" < "$api_call_retry_limit" ]] ; then
-        self_pol_id_tries=$((api_call_retry_limit-self_pol_id_try))
-        echo "Unable to retrieve Self-Registration_Login_Policy! Retrying $self_pol_id_tries more time(s)..."
-        check_self_policy_id
->>>>>>> 9101e8f42261af2ce80a969eb9254e30564b2d45
     else
         echo "Unable to successfully retrieve Self-Registration_Login_Policy and exceeded try limit!"
         exit 1
@@ -137,7 +130,6 @@ function check_apps_for_ssr() {
     --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
     assign_ssr_app
 }
-<<<<<<< HEAD
 check_apps_for_ssr
 
 ################## Assign Demo_Passwordless_SMS_Login_Policy to Passwordless Login SMS Only App ##################
@@ -379,62 +371,3 @@ function check_apps_for_mfa() {
 check_apps_for_mfa
 
 echo "------ End of 601-sample_app_pol_set.sh ------"
-=======
-check_apps
-
-#Get the new SMS ID
-SMS_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-| jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Passwordless_SMS_Login_Policy") | .id')
-
-SMS_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select(.name=="Demo App - Passwordless Login SMS Only") | .id')
-
-#Assign SMS App to SMS Policy
-ASSIGN_SMS_APP_POL=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications/$SMS_APP_ID/signOnPolicyAssignments" \
---header 'Content-Type: application/json' \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
---data-raw '{
-    "priority": 1,
-    "signOnPolicy": {
-    	"id": "'"$SMS_POL_ID"'"
-    }
-}')
-
-# verify app auth policy assigned
-ASSIGN_SMS_APP_POL_RESULT=$(echo $ASSIGN_SMS_APP_POL | sed 's@.*}@@')
-if [ "$ASSIGN_SMS_APP_POL_RESULT" == "201" ]; then
-    echo "SMS App to SMS Policy assigned successfully..."
-else
-    echo "SMS App to SMS Policy NOT assigned successfully!"
-    exit 1
-fi
-
-#Get the new passwordless ID
-ALL_MFA_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-| jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Passwordless_Any_Method_Login_Policy") | .id')
-
-PWDLESS_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select(.name=="Demo App - Passwordless Login Any Method") | .id')
-
-#Assign PWDLESS App to All MFA Policy
-ASSIGN_PWDLESS_APP_POL=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications/$PWDLESS_APP_ID/signOnPolicyAssignments" \
---header 'Content-Type: application/json' \
---header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
---data-raw '{
-    "priority": 1,
-    "signOnPolicy": {
-    	"id": "'"$ALL_MFA_POL_ID"'"
-    }
-}')
-
-# verify app auth policy assigned
-ASSIGN_PWDLESS_APP_POL_RESULT=$(echo $ASSIGN_PWDLESS_APP_POL | sed 's@.*}@@')
-if [ "$ASSIGN_PWDLESS_APP_POL_RESULT" == "201" ]; then
-    echo "PWDLESS App to All MFA Policy assigned successfully..."
-else
-    echo "PWDLESS App to All MFA Policy NOT assigned successfully!"
-    exit 1
-fi
->>>>>>> 9101e8f42261af2ce80a969eb9254e30564b2d45

@@ -1,10 +1,15 @@
 #!/bin/bash
 
-#cleanup in case of failed run prior
-script_dir="$(cd "$(dirname "$0")";cd ../../; pwd)"
-files_removed=$(echo "$script_dir/.gitlab-ci")
-find "$files_removed/cypress.d/cypress/integration/" -name *.js -type f -delete
-find "$files_removed" -name *.txt -type f -delete
+#set dirs
+script_dir="$(cd "$(dirname "$0")"; pwd)"
+#set the solution directory
+sol_dir="$(cd "$(dirname "$0")";cd ../../Solutions; pwd)"
+#set the cypress directory
+cypress_dir="$(cd "$(dirname "$0")";cd ../../cypress; pwd)"
+#cleanup in case of failure
+find "$cypress_dir"/integration/ -name *.js -type f -delete >> /dev/null
+find "$script_dir" -name *.txt -type f -delete >> /dev/null
+find "$cypress_dir" -name *.txt -type f -delete >> /dev/null
 
 #set if ENV_MANAGER.sh called actions
 export ENV_SCRIPT_CALLED=true
@@ -12,7 +17,14 @@ export ENV_SCRIPT_CALLED=true
 #user's shouldn't need to modify, but if you wish to test against another version of cypress, update this version
 if [ -z ${CYPRESS_VERSION+x} ]; then
     #not set, let's do it!
-  export CYPRESS_VERSION='6.5.0'
+  export CYPRESS_VERSION='6.6.0'
+fi
+
+#let's make sure docker is running
+DOCKER_STAT=$(docker info | grep "ERROR")
+if [[ $DOCKER_STAT == *"ERROR"* ]]; then
+    echo "Is Docker running?"
+    exit 1
 fi
 
 echo "You can use this utility to setup and configure a new CIAM or Workforce environment within your existing PingOne organization.
@@ -87,10 +99,10 @@ do
                 read -p "CIAM Environment Name: " NEW_CIAM_ENV_NAME
                 #again setting for future use
                 if [ -n "$NEW_CIAM_ENV_NAME" ]; then 
-                    echo "$NEW_CIAM_ENV_NAME" > "$script_dir"/.gitlab-ci/cypress.d/CIAM_ENV_NAME.txt
-                    export CIAM_ENV_NAME=$(cat "$script_dir"/.gitlab-ci/cypress.d/CIAM_ENV_NAME.txt)
+                    echo "$NEW_CIAM_ENV_NAME" > "$cypress_dir/CIAM_ENV_NAME.txt"
+                    export CIAM_ENV_NAME=$(cat "$cypress_dir"/CIAM_ENV_NAME.txt)
                 else
-                    echo "$CIAM_ENV_NAME" > "$script_dir"/.gitlab-ci/cypress.d/CIAM_ENV_NAME.txt
+                    echo "$CIAM_ENV_NAME" > "$cypress_dir"/CIAM_ENV_NAME.txt
                 fi
                 echo "Environment to be created is $CIAM_ENV_NAME"
                 echo " "
@@ -116,10 +128,10 @@ do
                 #set the env name for future use
                 #if user entered value, set to file
                 if [ -n "$NEW_WF_ENV_NAME" ]; then 
-                    echo "$NEW_WF_ENV_NAME" > "$script_dir"/.gitlab-ci/cypress.d/WF_ENV_NAME.txt
-                    export WF_ENV_NAME=$(cat "$script_dir"/.gitlab-ci/cypress.d/WF_ENV_NAME.txt)
+                    echo "$NEW_WF_ENV_NAME" > "$cypress_dir"/WF_ENV_NAME.txt
+                    export WF_ENV_NAME=$(cat "$cypress_dir"/WF_ENV_NAME.txt)
                 else
-                    echo "$WF_ENV_NAME" > "$script_dir"/.gitlab-ci/cypress.d/WF_ENV_NAME.txt
+                    echo "$WF_ENV_NAME" > "$cypress_dir"/WF_ENV_NAME.txt
                 fi
                 echo "Environment to be created is $WF_ENV_NAME"
                 echo " "
@@ -127,24 +139,25 @@ do
             #end WF set block
             echo "Configuring environment(s)"
             #lets build this!
-            bash "$script_dir/.gitlab-ci/00-configure-solution.sh"
+            bash "$script_dir"/.resources/00-configure.sh
             #cleanup sensitive files
             if [[ $CONFIGURE_WF = true ]]; then
-                wf_files="$script_dir/.gitlab-ci/cypress.d/WF*.txt"
+                wf_files="$cypress_dir"/WF*.txt
                 rm $wf_files
             fi
             if [[ $CONFIGURE_CIAM = true ]]; then
-                wf_files="$script_dir/.gitlab-ci/cypress.d/CIAM*.txt"
+                wf_files="$cypress_dir"/CIAM*.txt
                 rm $wf_files
             fi
-            echo "Environment(s) configured, please visit https://console.pingone.com/?env=$ADMIN_ENV_ID to view the new solution."
+            echo " "
+            echo "Environment(s) configured, please visit https://console.pingone.com/?env=$ADMIN_ENV_ID to view the new solution(s)."
             #done, woo!
             break
             ;;
         "Delete")                                                   #delete stage
             #variables are going to be for workforce, but we're just deleting any environment
             #set file variable for use
-            echo "$ADMIN_ENV_ID" > "$script_dir/.gitlab-ci/cypress.d/WF_envid.txt"
+            echo "$ADMIN_ENV_ID" > "$cypress_dir"/WF_envid.txt
             #if no env file set, then lets get the name from the user
             echo "Enter environment name to delete."
             read -p "Environment Name: " NEW_WF_ENV_NAME
@@ -152,12 +165,12 @@ do
                 echo "No environment selected, exiting now."
                 exit 1
             else
-                echo "$NEW_WF_ENV_NAME" > "$script_dir/.gitlab-ci/cypress.d/WF_ENV_NAME.txt"
-                export WF_ENV_NAME=$(cat "$script_dir/.gitlab-ci/cypress.d/WF_ENV_NAME.txt")
+                echo "$NEW_WF_ENV_NAME" > "$cypress_dir"/WF_ENV_NAME.txt
+                export WF_ENV_NAME=$(cat "$cypress_dir"/WF_ENV_NAME.txt)
                 echo "Removing Environment $WF_ENV_NAME"
             fi
             echo "Deleting environment(s)"
-            bash "$script_dir/.gitlab-ci/04-cleanup.sh"
+            bash "$script_dir"/.resources/04-cleanup.sh
             echo "Environment successfully removed."
             break
             ;;

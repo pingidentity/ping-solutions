@@ -13,7 +13,7 @@ stages:
   - 04-back-from-the-moon
 
 default:
-  image: "pingdevops.com/ci-utils/docker-builds-runner:edb6f37cedb342138aca215a69474e679b55390d5150ce8400eac264f2a864ae"
+  image: cypress/browsers:$DOCKER_IMAGE_VER
   services:
     - name: "docker:18.09-dind"
   tags:
@@ -29,38 +29,130 @@ variables:
   KUBERNETES_POLL_TIMEOUT: 600
 
 configure-solution:
-    stage: 00-to-the-moon
-    script:
-      - "./.gitlab-ci/00-configure-solution.sh"
-    artifacts:
-      paths:
-        - "./.gitlab-ci/cypress.d/"
+  stage: 00-to-the-moon
+  script:
+    #get cypress ready to roll
+    - npm init -y && npm install cypress@$CYPRESS_VERSION --save-dev
+    - npm ci
+    # show all installed versions of Cypress binary
+    - npx cypress cache list
+    # print CI environment variables for reference
+    - npx cypress verify
+    #set up scripts for cypress environment configuration
+    - "./.gitlab-ci/00-base-environment-creation.sh"
+    #extra arg due to mem problems crashing the runner. silly Chrome :(
+    - npx cypress run --spec "./cypress/integration/CIAM/*create*.js" --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
+    - npx cypress run --spec "./cypress/integration/WF/*create*.js" --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
+    #perform environment configuration (all, including set, revert, create, and delete)
+    - "./.gitlab-ci/01-base-environment-configuration.sh"
+    - "./.gitlab-ci/02-cypress-substitution.sh"
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      #test where txt file going
+      - "./cypress/"
+      - "./cypress/integration/"
+      - "./cypress.json"
 
-test-configured-state:
-    stage: 01-configured-test
-    script:
-      - "./.gitlab-ci/01-configured-test.sh"
-    dependencies:
-      - configure-solution
+CIAM-test-configured-state:
+  stage: 01-configured-test
+  script:
+    #get cypress ready to roll
+    - npm init -y && npm install cypress@$CYPRESS_VERSION --save-dev    
+    #run master set test scripts for CIAM
+    - npx cypress run --spec './cypress/integration/CIAM/set.js' --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
+  dependencies:
+    - configure-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
+
+WF-test-configured-state:
+  stage: 01-configured-test
+  script:
+    #get cypress ready to roll
+    - npm init -y && npm install cypress@$CYPRESS_VERSION --save-dev
+    #run master set test scripts for WF
+    - npx cypress run --spec './cypress/integration/WF/set.js' --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
+  dependencies:
+    - configure-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
 
 revert-solution:
   stage: 02-spin-that-car-around
   script:
-    - "./.gitlab-ci/02-revert-solution.sh"
+    #api calls to revert environment for final testing.
+    - "./.gitlab-ci/03-base-environment-revert.sh"
   dependencies:
     - configure-solution
 
-test-reverted-state:
+CIAM-test-reverted-state:
   stage: 03-reverted-test
   script:
-    - "./.gitlab-ci/03-reverted-test.sh"
+    #get cypress ready to roll
+    - npm init -y && npm install cypress@$CYPRESS_VERSION --save-dev
+    #run master revert tests scripts for CIAM
+    - npx cypress run --spec './cypress/integration/CIAM/revert.js' --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
   dependencies:
     - configure-solution
+    - revert-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
 
-env-cleanup:
+WF-test-reverted-state:
+  stage: 03-reverted-test
+  script:
+    #get cypress ready to roll
+    - npm init -y && npm install cypress@$CYPRESS_VERSION --save-dev
+    #run master revert tests scripts for WF
+    - npx cypress run --spec './cypress/integration/WF/revert.js' --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
+  dependencies:
+    - revert-solution
+    - configure-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
+
+CIAM-env-cleanup:
   stage: 04-back-from-the-moon
   when: always
   script:
-    - "./.gitlab-ci/04-cleanup.sh"
+    #get cypress ready to roll
+    - npm init -y && npm install cypress@$CYPRESS_VERSION --save-dev
+    #run delete environment script for CIAM
+    - npx cypress run --spec "./cypress/integration/CIAM/*delete*.js" --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
   dependencies:
     - configure-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
+
+WF-env-cleanup:
+  stage: 04-back-from-the-moon
+  when: always
+  script:
+    #get cypress ready to roll
+    - npm init -y && npm install cypress@$CYPRESS_VERSION --save-dev
+    #run delete environment script for WF
+    - npx cypress run --spec "./cypress/integration/WF/*delete*.js" --env ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--expose_gc
+  dependencies:
+    - configure-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
