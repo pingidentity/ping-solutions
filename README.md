@@ -8,9 +8,11 @@
 
 This repo is a WIP for configuring demo environments within PingOne and Ping Federate. The repo provides a method of configuring PingOne via local scripts and a Docker image utilizing Cypress to perform the initial configuration of new environment(s).
 
-* **NOTE**: This tool is not "production ready". While this can be used to test the current working solution to stand up and configure a working demo Workforce or CIAM instance, during configuration sensitive information will be stored in text files within the _.gitlab_ directory. This information is purged at the end of script, but please take care to safeguard your information.
+* **NOTE**: This tool is not "production ready". While this can be used to test the current working solution to stand up and configure a working demo Workforce or CIAM instance, during configuration sensitive information will be stored in text files. This information is purged at the end of script, and it may be difficult to determine the actual environment this information would be associated with, but please take care to safeguard your information.
 
-* **NOTE**: Cypress.io errors may not be helpful to troubleshoot problems experienced during environment creation or deletion. Navigate to _.gitlab-ci/cypress.d/cypress/videos_ within the solutions directory(due to the "." at the beginning of the name, this directory is hidden by default on MacOS. Press _shift+command+._ to show hidden directories). Within this directory there will be mp4 files showing the steps performed during creation.
+* **NOTE**: Cypress.io errors may not be helpful to troubleshoot problems experienced during environment creation or deletion. Navigate to _/cypress/videos_ within the solutions directory. Within this directory there will be mp4 files showing the steps performed during creation.
+
+* **NOTE**: Make sure Docker is running. We've added a check that _should_ error out if it's not, but this can be a fairly common failure point if this script doesn't run.
 
 ## Deploying via local script
 
