@@ -42,8 +42,8 @@ configure-solution:
     #set up scripts for cypress environment configuration
     - "./.gitlab-ci/00-base-environment-creation.sh"
     #extra arg due to mem problems crashing the runner. silly Chrome :(
-    - npx cypress run --spec "./cypress/integration/CIAM/*create*.js" --browser chrome --headless
-    - npx cypress run --spec "./cypress/integration/WF/*create*.js" --browser chrome --headless
+    - npx cypress run --spec "./cypress/integration/CIAM/02-create_ciam_env.js" --browser chrome --headless
+    - npx cypress run --spec "./cypress/integration/WF/01-create_wf_env.js" --browser chrome --headless
     #perform environment configuration (all, including set, revert, create, and delete)
     - "./.gitlab-ci/01-base-environment-configuration.sh"
     - "./.gitlab-ci/02-cypress-substitution.sh"
