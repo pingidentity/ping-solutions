@@ -79,9 +79,9 @@ sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s
 -e "s/PROD_NM/WF/g" -e "s@cypress_dir@$cypress_dir@g" >> \
 "$cypress_dir"/integration/WF/01-create_wf_env.js
 
- cat "$script_dir"/cypress.d/base_files/env_files/create_CIAM_env.js | \
- sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" -e "s/LIC_TYPE/$PING_LICENSE/g" > \
- "$cypress_dir"/integration/CIAM/02-create_ciam_env.js
+cat "$script_dir"/cypress.d/base_files/env_files/create_CIAM_env.js | \
+sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" -e "s/LIC_TYPE/$PING_LICENSE/g" > \
+"$cypress_dir"/integration/CIAM/02-create_ciam_env.js
 
 cat "$script_dir"/cypress.d/base_files/env_files/create_worker_app.js | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" \

@@ -104,4 +104,4 @@ Enter environment name to delete.
 Environment Name:
 ```
 
-
+**httpbin is included under the ISC license. See https://github.com/postmanlabs/httpbin for more details.**
