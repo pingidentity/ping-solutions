@@ -44,21 +44,18 @@ describe('Creating new P14C environment', () => {
           cy.get('[data-id="guide-close-button"]').click();
       }
       cy.getIframeBody().find('[data-id="add.env"]').click();
-      cy.getIframeBody().find('[data-id="customers"]').click();
+      cy.getIframeBody().find('[data-id="custom"]').click();
       cy.getIframeBody().find('[data-id="PING_ONE_BASE"]').trigger('mouseover');
       cy.getIframeBody().find('[data-id="select.btn"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_MFA"]').trigger('mouseover');
+      cy.getIframeBody().find('[data-id="PING_ID"]').trigger('mouseover');
       cy.getIframeBody().find('[data-id="select.btn"]').click();
       cy.getIframeBody().find('[data-id="PING_ONE_RISK"]').trigger('mouseover');
       cy.getIframeBody().find('[data-id="select.btn"]').click();
       cy.getIframeBody().find('[data-id="PING_ONE_VERIFY"]').trigger('mouseover');
       cy.getIframeBody().find('[data-id="select.btn"]').click();
       cy.getIframeBody().find('[data-id="next.btn"]').click();
-      //cy.getIframeBody().find('input[name="product-setup-PING_ONE_BASE"]').first().check({ force: true });
-      //cy.getIframeBody().find('input[name="product-setup-PING_ONE_MFA"]').first().check({ force: true });
-      //cy.getIframeBody().find('input[name="product-setup-PING_ONE_RISK"]').first().check({ force: true });
-      //cy.getIframeBody().find('input[name="product-setup-PING_ONE_VERIFY"]').first().check({ force: true });
-      //cy.getIframeBody().find('[data-id="sample-data-checkbox"]').click();
+      //select already deployed
+      cy.getIframeBody().find('[data-id="option1.v1.PING_ID]').first().check();
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       cy.getIframeBody().find('#name').type("ENV_NM");
       cy.getIframeBody().find('[data-id="sample-data-checkbox"]').click();
@@ -71,4 +68,3 @@ describe('Creating new P14C environment', () => {
       cy.get('[data-id="account"]').click();
       cy.get('[data-id="signoff.link"]').click();
     })
-})

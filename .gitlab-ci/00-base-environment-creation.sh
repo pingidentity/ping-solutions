@@ -70,30 +70,29 @@ echo "Performing variable substitution"
 
 echo "Setting up P14C environment"
 
-cat "$script_dir"/cypress.d/base_files/env_files/create_env.js | \
+cat "$script_dir"/cypress.d/base_files/env_files/create_WF_env.js | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" -e "s/LIC_TYPE/$PING_LICENSE/g" > \
-"$cypress_dir"/integration/WF/02-create_wf_env.js
+"$cypress_dir"/integration/WF/01-create_wf_env.js
 
 cat "$script_dir"/cypress.d/base_files/env_files/create_worker_app.js | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" \
--e "s/PROD_NM/WF/g" -e "s@cypress_dir@$cypress_dir@g" > \
-"$cypress_dir"/integration/WF/03-create_wf_worker_app.js
+-e "s/PROD_NM/WF/g" -e "s@cypress_dir@$cypress_dir@g" >> \
+"$cypress_dir"/integration/WF/01-create_wf_env.js
 
- cat "$script_dir"/cypress.d/base_files/env_files/create_env.js | \
+ cat "$script_dir"/cypress.d/base_files/env_files/create_CIAM_env.js | \
  sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" -e "s/LIC_TYPE/$PING_LICENSE/g" > \
- "$cypress_dir"/integration/CIAM/04-create_ciam_env.js
+ "$cypress_dir"/integration/CIAM/02-create_ciam_env.js
 
 cat "$script_dir"/cypress.d/base_files/env_files/create_worker_app.js | \
 sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" \
--e "s/PROD_NM/CIAM/g" -e "s@cypress_dir@$cypress_dir@g" > \
-"$cypress_dir"/integration/CIAM/05-create_ciam_worker_app.js
+-e "s/PROD_NM/CIAM/g" -e "s@cypress_dir@$cypress_dir@g" >> \
+"$cypress_dir"/integration/CIAM/02-create_ciam_env.js
 
 cat "$script_dir"/cypress.d/base_files/env_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$cypress_dir"/../cypress.json
 
 #lets crash and burn here if these don't exist
 if [[ $CONFIGURE_WF = true ]]; then
-  if [ ! -f "$cypress_dir"/integration/WF/02-create_wf_env.js ] || \
-  [ ! -f "$cypress_dir"/integration/WF/03-create_wf_worker_app.js ]; then
+  if [ ! -f "$cypress_dir"/integration/WF/01-create_wf_env.js ]; then
       echo "Variable substitution to set up WF environment not performed properly, exiting now..."
       exit 1
     else
@@ -102,8 +101,7 @@ if [[ $CONFIGURE_WF = true ]]; then
 fi
 
 if [[ $CONFIGURE_CIAM = true ]]; then
-  if [ ! -f "$cypress_dir"/integration/CIAM/04-create_ciam_env.js ] ||  \
-  [ ! -f "$cypress_dir"/integration/CIAM/05-create_ciam_worker_app.js ]; then
+  if [ ! -f "$cypress_dir"/integration/CIAM/02-create_ciam_env.js ]; then
     echo "Variable substitution to set up CIAM environment not performed properly, exiting now..."
     exit 1
     else
