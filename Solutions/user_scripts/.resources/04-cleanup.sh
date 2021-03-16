@@ -42,7 +42,7 @@ sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s
 "$cypress_dir"/integration/WF/01-delete_env.js
 
 
-cat "$script_dir"/cypress.d/base_files/env_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$cypress_dir"/cypress.json
+cat "$script_dir"/cypress.d/base_files/env_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$cypress_dir"/../cypress.json
 
 DOCKER_RUN_OPTIONS="-i --rm"
 # Only allocate tty if we detect one
