@@ -20,7 +20,7 @@
       // go to admin sso attribute, find expected value
       cy.get('[data-id="sidebar-section_users"]').click();
       cy.get('[data-id="sidebar-node_attributes"]').click();
-      cy.getIframeBody().find('[data-id="searchBox-input"]').type('pf-admin-role');
+      cy.wait(1000).getIframeBody().find('[data-id="searchBox-input"]').type('pf-admin-role');
       cy.getIframeBody().find('[data-id="scrolling-wrapper"]').should('not.contain','pf-admin-role');
       // go to admin account
       cy.get('[data-id="sidebar-node_user"]').click();
