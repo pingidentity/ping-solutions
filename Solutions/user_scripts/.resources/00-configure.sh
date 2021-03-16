@@ -106,7 +106,7 @@ if [[ $CONFIGURE_CIAM = true ]]; then
   "$cypress_dir"/integration/CIAM/05-create_ciam_worker_app.js
 fi
 
-cat "$script_dir"/cypress.d/base_files/env_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$cypress_dir"/cypress.json
+cat "$script_dir"/cypress.d/base_files/env_files/cypress.json.base | sed -e "s/PID/$CYPRESS_PROJECT_ID/g" > "$cypress_dir"/../cypress.json
 
 #lets crash and burn here if these don't exist
 if [[ $CONFIGURE_WF = true ]]; then
