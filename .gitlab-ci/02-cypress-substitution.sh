@@ -44,6 +44,14 @@ export CLIENT_ID=$(cat "$cypress_dir"/WF_client_id.txt)
 export CLIENT_SECRET=$(cat "$cypress_dir"/WF_client_secret.txt)
 export ENV_ID=$(cat "$cypress_dir"/WF_envid.txt)
 
+#get a worker app token to run our tests (WF)
+export WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
+--location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
+--header "Content-Type: application/x-www-form-urlencoded" \
+--data-raw 'grant_type=client_credentials' \
+| jq -r '.access_token')
+
+
 echo "Performing WF variable substitution..."
 #create generation
 cat "$script_dir"/cypress.d/base_files/base_set.js | \
@@ -52,11 +60,13 @@ sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s
 
 #concatenate the configured WF test suite
 for script in "$script_dir"/cypress.d/base_files/WF/*set.js; do
-    echo "copying $script..."
+    echo "Copying $script..."
     cat $script | \
     sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" >> \
     $cypress_dir/integration/WF/set.js
 done
+
+#close the cypress test script
 echo "
 })" >> $cypress_dir/integration/WF/set.js
 
@@ -67,11 +77,13 @@ sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s
 
 #concatenate the revert WF test suite
 for script in "$script_dir"/cypress.d/base_files/WF/*revert.js; do
-    echo "copying $script..."
+    echo "Copying $script..."
     cat $script | \
     sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$WF_ENV_NAME/g" >> \
     $cypress_dir/integration/WF/revert.js
 done
+
+#close the cypress test script
 echo "
 })" >> $cypress_dir/integration/WF/revert.js
 
@@ -86,6 +98,13 @@ export CLIENT_ID=$(cat "$cypress_dir"/CIAM_client_id.txt)
 export CLIENT_SECRET=$(cat "$cypress_dir"/CIAM_client_secret.txt)
 export ENV_ID=$(cat "$cypress_dir"/CIAM_envid.txt)
 
+#get a worker app token to run our tests (CIAM)
+export WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
+--location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
+--header "Content-Type: application/x-www-form-urlencoded" \
+--data-raw 'grant_type=client_credentials' \
+| jq -r '.access_token')
+
 #echo "Performing tests on configured state."
 echo "Performing CIAM variable substitution..."
 
@@ -96,11 +115,21 @@ sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s
 
 #concatenate the configured CIAM test suite
 for script in "$script_dir"/cypress.d/base_files/CIAM/*set.js; do
-    echo "copying $script..."
+    echo "Copying $script..."
     cat $script | \
     sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" >> \
     $cypress_dir/integration/CIAM/set.js
 done
+
+#add the supplemental tests for CIAM into the script generation
+#including supplemental test scripts
+echo "Adding additional CIAM test config scripts"
+for script in "$script_dir"/test_scripts/CIAM/*.sh; do
+    echo "Executing $script..."
+    bash $script
+done
+
+#close the cypress test script
 echo "
 })" >> $cypress_dir/integration/CIAM/set.js
 
@@ -111,11 +140,13 @@ sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s
 
 #concatenate the revert CIAM test suite
 for script in "$script_dir"/cypress.d/base_files/CIAM/*revert.js; do
-    echo "copying $script..."
+    echo "Copying $script..."
     cat $script | \
     sed -e "s/ENV_ID/$ADMIN_ENV_ID/g" -e "s/TEST_USERNAME/$CONSOLE_USERNAME/g" -e "s/TEST_PASSWORD/$CONSOLE_PASSWORD/g" -e "s/ENV_NM/$CIAM_ENV_NAME/g" >> \
     $cypress_dir/integration/CIAM/revert.js
 done
+
+#close the cypress test script
 echo "
 })" >> $cypress_dir/integration/CIAM/revert.js
 

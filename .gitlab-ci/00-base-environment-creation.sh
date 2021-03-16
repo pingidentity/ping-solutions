@@ -9,6 +9,7 @@ script_dir="$(cd "$(dirname "$0")"; pwd)"
 sol_dir="$(cd "$(dirname "$0")";cd ../Solutions; pwd)"
 #set the cypress directory
 cypress_dir=$(echo "$script_dir/../cypress")
+
 #cleanup in case of failure
 find "$cypress_dir"/integration/ -name *.js -type f -delete
 find "$script_dir" -name *.txt -type f -delete
