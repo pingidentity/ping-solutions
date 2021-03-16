@@ -22,9 +22,13 @@ describe('Creating new P14C environment', () => {
     })
       cy.visit('https://console.pingone.com/?env=ENV_ID');
       //login
-      cy.get('#username').type('TEST_USERNAME');
-      cy.get('#password').type('TEST_PASSWORD');
-      cy.get('.button').click();
+      cy.url().then(($url) => {
+        if($url.includes('signon')) {
+          cy.get('#username').type('TEST_USERNAME');
+          cy.get('#password').type('TEST_PASSWORD');
+          cy.get('.button').click();
+        }
+      })
       if(cy.url().should('not.include', '/myping/home'))
       {
           cy.log('Warning, could not log in successfully')
@@ -55,7 +59,7 @@ describe('Creating new P14C environment', () => {
       cy.getIframeBody().find('[data-id="select.btn"]').click();
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       //select already deployed
-      cy.getIframeBody().find('[data-id="option1.v1.PING_ID]').first().check();
+      cy.getIframeBody().find('[type="radio"]').first().check({force: true});
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       cy.getIframeBody().find('#name').type("ENV_NM");
       cy.getIframeBody().find('[data-id="sample-data-checkbox"]').click();

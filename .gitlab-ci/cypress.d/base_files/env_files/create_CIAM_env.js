@@ -22,9 +22,13 @@ describe('Creating new P14C environment', () => {
     })
       cy.visit('https://console.pingone.com/?env=ENV_ID');
       //login
-      cy.get('#username').type('TEST_USERNAME');
-      cy.get('#password').type('TEST_PASSWORD');
-      cy.get('.button').click();
+      cy.url().then(($url) => {
+        if($url.includes('signon')) {
+          cy.get('#username').type('TEST_USERNAME');
+          cy.get('#password').type('TEST_PASSWORD');
+          cy.get('.button').click();
+        }
+      })
       if(cy.url().should('not.include', '/myping/home'))
       {
           cy.log('Warning, could not log in successfully')
