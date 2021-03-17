@@ -7,7 +7,7 @@
 # WORKER_APP_ACCESS_TOKEN
 
 
-echo "------ Beginning 601-sample_app_pol_set.sh ------"
+echo "------ Beginning 600-sample_app_creation_set.sh ------"
 
 # set global api call retry limit - this can be set to desired amount, default is 1
 api_call_retry_limit=1

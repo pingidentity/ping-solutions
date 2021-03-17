@@ -99,10 +99,7 @@ do
                 read -p "CIAM Environment Name: " NEW_CIAM_ENV_NAME
                 #again setting for future use
                 if [ -n "$NEW_CIAM_ENV_NAME" ]; then 
-                    echo "$NEW_CIAM_ENV_NAME" > "$cypress_dir/CIAM_ENV_NAME.txt"
-                    export CIAM_ENV_NAME=$(cat "$cypress_dir"/CIAM_ENV_NAME.txt)
-                else
-                    echo "$CIAM_ENV_NAME" > "$cypress_dir"/CIAM_ENV_NAME.txt
+                    export CIAM_ENV_NAME="$NEW_CIAM_ENV_NAME"
                 fi
                 echo "Environment to be created is $CIAM_ENV_NAME"
                 echo " "
@@ -128,10 +125,7 @@ do
                 #set the env name for future use
                 #if user entered value, set to file
                 if [ -n "$NEW_WF_ENV_NAME" ]; then 
-                    echo "$NEW_WF_ENV_NAME" > "$cypress_dir"/WF_ENV_NAME.txt
-                    export WF_ENV_NAME=$(cat "$cypress_dir"/WF_ENV_NAME.txt)
-                else
-                    echo "$WF_ENV_NAME" > "$cypress_dir"/WF_ENV_NAME.txt
+                    export WF_ENV_NAME="$NEW_WF_ENV_NAME"
                 fi
                 echo "Environment to be created is $WF_ENV_NAME"
                 echo " "

@@ -7,6 +7,8 @@
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 
+echo "------ Beginning 300-user_populations_revert.sh ------"
+
 # get Sample Users population name
 CONTRACTOR_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Contractors") | .name')
@@ -89,3 +91,4 @@ for SAMPLE_POP in "${SAMPLE_POPS[@]}"; do
     fi
 done
 echo "Revert User Populations checks and tasks completed."
+echo "------ End of 300-user_populations_revert.sh ------"

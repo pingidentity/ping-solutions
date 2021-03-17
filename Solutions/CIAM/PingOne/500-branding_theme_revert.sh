@@ -7,6 +7,8 @@
 #ENV_ID
 #WORKER_APP_ACCESS_TOKEN
 
+echo "------ Beginning 500-branding_theme_revert.sh ------"
+
 SPLIT_THEME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/themes" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.themes[] | select(.template=="split") | .configuration.name')
 
@@ -57,3 +59,5 @@ for THEME in "${THEMES[@]}"; do
         fi
     fi
 done
+
+echo "------ End 500-branding_theme_revert.sh ------"

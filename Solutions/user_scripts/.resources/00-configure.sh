@@ -40,34 +40,6 @@ elif [[ $CONSOLE_USERNAME != *"@pingidentity.com" ]]; then
   PING_LICENSE="PingOne for Customers Trial"
 fi
 
-#WORKFORCEEEEEEEEEEE
-#setup the env name. echoing because something might not be set?
-#using the cypress.d directory due to persisting between stages. Using epoch time for uniqueness.
-if [[ $CONFIGURE_WF = true ]]; then
-  if [ -e "$cypress_dir"/WF_ENV_NAME.txt ]; then
-    echo "Setting Workforce environment value from user input."
-    export WF_ENV_NAME=$(cat "$cypress_dir"/WF_ENV_NAME.txt)
-  else
-    echo "Setting Workforce environment value."
-    date +"WF_DEMO_ENV_"%s > "$cypress_dir"/WF_ENV_NAME.txt
-    export WF_ENV_NAME=$(cat "$cypress_dir"/WF_ENV_NAME.txt)
-    if [ -z ${WF_ENV_NAME+x} ]; then echo "WF environment name is unset" && exit 1; else echo "WF environment name is $WF_ENV_NAME"; fi
-  fi
-fi
-
-if [[ $CONFIGURE_CIAM = true ]]; then
-  if [ -e "$cypress_dir"/CIAM_ENV_NAME.txt ]; then
-    echo "Setting CIAM environment value from user input."
-    export CIAM_ENV_NAME=$(cat "$cypress_dir"/CIAM_ENV_NAME.txt)
-  else
-    echo "Setting CIAM environment value."
-    date +"CIAM_DEMO_ENV_"%s > "$cypress_dir"/CIAM_ENV_NAME.txt
-    export CIAM_ENV_NAME=$(cat "$cypress_dir"/CIAM_ENV_NAME.txt)
-    if [ -z ${CIAM_ENV_NAME+x} ]; then echo "CIAM environment name is unset" && exit 1; else echo "CIAM environment name is $CIAM_ENV_NAME"; fi
-  fi
-fi
-
-
 if [ -z ${ADMIN_ENV_ID+x} ]; then echo "ENV ID is unset" && exit 1; else echo "Admin Environment ID is $ADMIN_ENV_ID"; fi
 if [ -z ${CONSOLE_USERNAME+x} ]; then echo "Console username is unset" && exit 1; else echo "Console user is $CONSOLE_USERNAME"; fi
 if [ -z ${CONSOLE_PASSWORD+x} ]; then echo "Console password is unset" && exit 1; else echo "Console password is set."; fi

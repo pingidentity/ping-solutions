@@ -8,7 +8,7 @@
 # WORKER_APP_ACCESS_TOKEN
 
 #define script for job.
-echo "Executing 100-pass_policy_set.sh"
+echo "------ Beginning of 100-pass_policy_set.sh ------"
 
 # set global api call retry limit - this can be set to desired amount, default is 2
 api_call_retry_limit=2
@@ -90,4 +90,4 @@ function check_password_policy() {
 #execute the function 
 set_password_policy
 
-echo "Finished 100-pass_policy_set.sh"
+echo "------ End of 100-pass_policy_set.sh ------"
