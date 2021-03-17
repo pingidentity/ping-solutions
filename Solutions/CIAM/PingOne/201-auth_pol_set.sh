@@ -8,7 +8,7 @@
 # WORKER_APP_ACCESS_TOKEN
 
 #define script for job.
-echo "Executing 201-auth_pol_set.sh"
+echo "------ Beginning 201-auth_pol_set.sh ------"
 
 # set global api call retry limit - this can be set to desired amount, default is 2
 api_call_retry_limit=2
@@ -365,4 +365,4 @@ function mfa_action2_val () {
 def_pop_id
 
 #script finish
-echo "Finished 201_auth_pol_set.sh"
+echo "------ End 201-auth_pol_set.sh ------"

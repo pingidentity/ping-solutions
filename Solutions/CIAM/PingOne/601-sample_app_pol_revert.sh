@@ -7,6 +7,8 @@
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 
+echo "------ Beginning 601-sample_app_pol_set.sh ------"
+
 SSR_APP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select(.name=="Demo App - Self-Service Registration") | .name')
 
@@ -95,3 +97,4 @@ for SAMPLE_APP in "${SAMPLE_APPS[@]}"; do
 done
 
 echo "Sample application policy removal checks and tasks completed..."
+echo "------ End of 601-sample_app_pol_set.sh ------"

@@ -8,7 +8,7 @@
 # WORKER_APP_ACCESS_TOKEN
 
 #define script for job.
-echo "Executing 201-auth_pol_revert.sh"
+echo "------ Beginning 201-auth_pol_revert.sh ------"
 
 # set global api call retry limit - this can be set to desired amount, default is 2
 api_call_retry_limit=2
@@ -156,4 +156,4 @@ function validate_delete () {
 sfa_def
 
 #script finish
-echo "Finished 201_auth_pol_revert.sh"
+echo "------ End 201-auth_pol_revert.sh ------"

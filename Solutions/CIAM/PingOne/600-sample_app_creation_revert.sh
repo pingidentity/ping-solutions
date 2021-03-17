@@ -7,6 +7,8 @@
 #ENV_ID
 #WORKER_APP_ACCESS_TOKEN
 
+echo "------ Beginning 600-sample_app_creation_set.sh ------"
+
 SAMPLE_APP_1=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select(.name=="Demo App - Self-Service Registration") | .name')
 
@@ -43,3 +45,5 @@ for SAMPLE_APP in "${SAMPLE_APPS[@]}"; do
         echo "Sample Application did not match app name expected for deletion, ignoring..."
     fi
 done
+
+echo "------ End 600-sample_app_creation_set.sh ------"
