@@ -7,6 +7,8 @@
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 
+echo "------ Beginning 400-pf_admin_sso_revert.sh ------"
+
 # check if admin account exists, get expected username
 CHECK_ADMIN_ACCOUNT=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/users" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.users[] | select(.username=="PingFederateAdmin") | .username')
@@ -128,3 +130,5 @@ else
 fi
 
 echo "Checks and tasks completed..."
+
+echo "------ End 400-pf_admin_sso_revert.sh ------"

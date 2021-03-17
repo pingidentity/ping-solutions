@@ -8,7 +8,7 @@
 # WORKER_APP_ACCESS_TOKEN
 
 #define script for job.
-echo "Executing 200-risk_policy_revert.sh"
+echo "------ Beginning of 200_risk_policy_set.sh ------"
 
 # set global api call retry limit - this can be set to desired amount, default is 2
 api_call_retry_limit=2
@@ -150,4 +150,4 @@ function check_risk_enabled() {
 check_risk_enabled
 
 #script finish
-echo "Finished 200_risk_policy_revert.sh"
+echo "------ End of 200_risk_policy_set.sh ------"

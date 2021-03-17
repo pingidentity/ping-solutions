@@ -14,6 +14,9 @@ This repo is a WIP for configuring demo environments within PingOne and Ping Fed
 
 * **NOTE**: Make sure Docker is running. We've added a check that _should_ error out if it's not, but this can be a fairly common failure point if this script doesn't run.
 
+* **NOTE**: Httpbin is a tool provided by a third party and Ping Identity makes no warranties or assumes any liability for your use of httpbin in the event that you elect to utilize it.
+
+
 ## Deploying via local script
 
   ### Prerequisites:
@@ -101,4 +104,4 @@ Enter environment name to delete.
 Environment Name:
 ```
 
-
+**httpbin is included under the ISC license. See https://github.com/postmanlabs/httpbin for more details.**
