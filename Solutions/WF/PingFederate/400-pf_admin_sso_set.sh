@@ -7,7 +7,6 @@
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
 # PINGFED_BASE_URL
-# DOMAIN
 
 echo "------ Beginning 400-pf_admin_sso_set.sh ------"
 
@@ -48,194 +47,6 @@ function check_schema() {
     assign_schema_id
 }
 check_schema
-
-#################################### Check to make sure PingFed Admin Role was created ##################
-admin_attr_try=0
-
-function check_admin_attr_content() {
-    CHECK_ADMIN_ATTRIBUTE_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-    | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .enabled')
-    if [ "$CHECK_ADMIN_ATTRIBUTE_AGAIN" != "true" ]; then
-        admin_attr_tries_left=$((api_call_retry_limit-admin_attr_try))
-        echo "Unable to verify content... Retrying $admin_attr_try..."
-        admin_attr_try=$((admin_attr_try+1))
-        create_admin_attr
-    else
-        echo "PingFederate Admin role attribute exists and verified content..."
-    fi
-}
-
-function create_admin_attr() {
-    # check if admin attribute already exists
-    CHECK_ADMIN_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .enabled')
-
-    if [ "$CHECK_ADMIN_ATTRIBUTE" != "true" ]; then
-        # create PingFed Admin Role attribute
-        PF_ADMIN_ATTRIBUTE=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/schemas/$USER_SCHEMA_ID/attributes" \
-        --header 'Content-Type: application/json' \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        --data-raw '{
-        "description": " ",
-        "displayName": "PingFed Admin Role",
-        "enabled": true,
-        "name": "pf-admin-role",
-        "required": false,
-        "type": "STRING",
-        "unique": false
-        }')
-        # checks app created, as well as verify expected app name to ensure creation
-        PF_ADMIN_ATTRIBUTE_RESULT=$(echo $PF_ADMIN_ATTRIBUTE | sed 's@.*}@@')
-        if [[ $PF_ADMIN_ATTRIBUTE_RESULT == "201" ]]; then
-            echo "PingFederate Admin role attribute added, beginning content check..."
-            check_admin_attr_content
-        elif [[ $PF_ADMIN_ATTRIBUTE_RESULT != "201" ]] && [[ "$admin_attr_try" < "$api_call_retry_limit" ]]; then
-            echo "PingFederate Admin role attribute NOT added! Checking app existence..."
-            check_admin_attr_content
-        else
-            echo "PingFederate Admin role attribute does NOT exist and attempts to create exceeded!"
-            exit 1
-        fi
-    else
-        echo "PingFederate Admin role attribute existence check passed. Checking content..."
-        check_admin_attr_content
-    fi
-}
-create_admin_attr
-
-#################################### Add Web OIDC App ####################################
-pf_admin_app_try=0
-
-function check_pf_admin_app_content() {
-    # check if Web OIDC App exists
-    CHECK_WEB_OIDC_APP_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
-    if [ "$CHECK_WEB_OIDC_APP_AGAIN" != "true" ]; then
-        admin_app_tries_left=$((api_call_retry_limit-pf_admin_app_try))
-        echo "Unable to verify content... Retrying $admin_app_tries_left..."
-        pf_admin_app_try=$((pf_admin_app_try+1))
-        create_pf_admin_app
-    else
-        echo "PingFederate Admin SSO app exists and verified content, setting variables to be used for later..."
-        # this is used for functions below as well as the oidc file section at the bottom
-        WEB_OIDC_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .id')
-        if [[ -z "$WEB_OIDC_APP_ID" ]] || [[ "$WEB_OIDC_APP_ID" == "" ]]; then
-            echo "PingFederate Admin SSO app ID unable to be set correctly, retrying..."
-            check_pf_admin_app_content
-        else
-            echo "PingFederate Admin SSO app ID set correctly..."
-        fi
-        # this is used in the run properties file section at the bottom
-        OIDC_APP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .name')
-        if [[ -z "$OIDC_APP_NAME" ]] || [[ "$OIDC_APP_NAME" == "" ]]; then
-            echo "PingFederate Admin SSO app name unable to be set correctly, retrying..."
-            check_pf_admin_app_content
-        else
-            echo "PingFederate Admin SSO app name set correctly..."
-        fi
-    fi
-}
-
-function create_pf_admin_app() {
-    # check if Web OIDC App exists
-    CHECK_WEB_OIDC_APP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
-    if [ "$CHECK_WEB_OIDC_APP" != "true" ]; then
-        echo "PingFederate Admin SSO does not exist, adding now..."
-        WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications" \
-        --header 'Content-Type: application/json' \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        --data-raw '{
-            "enabled": true,
-            "name": "PingFederate Admin SSO",
-            "#description": " ",
-            "type": "WEB_APP",
-            "protocol": "OPENID_CONNECT",
-            "grantTypes": [
-                "AUTHORIZATION_CODE"
-            ],
-            "redirectUris": [
-                "'"https://$PINGFED_BASE_URL:443/pingfederate/app?service=finishsso"'"
-            ],
-            "responseTypes": [
-                "CODE"
-            ],
-            "tokenEndpointAuthMethod": "CLIENT_SECRET_BASIC",
-            "pkceEnforcement": "OPTIONAL"
-        }')
-
-        # checks app created, as well as verify expected app name to ensure creation
-        WEB_OIDC_APP_RESULT=$(echo $WEB_OIDC_APP | sed 's@.*}@@')
-        if [[ $WEB_OIDC_APP_RESULT == "201" ]]; then
-            echo "PingFederate Admin SSO app added, beginning content check..."
-            check_pf_admin_app_content
-        elif [[ $WEB_OIDC_APP_RESULT != "201" ]] && [[ "$pf_admin_app_try" < "$api_call_retry_limit" ]]; then
-            echo "PingFederate Admin SSO app NOT added! Checking app existence..."
-            check_pf_admin_app_content
-        else
-            echo "PingFederate Admin SSO app does NOT exist and attempts to create exceeded!"
-            exit 1
-        fi
-    else
-        echo "PingFederate Admin SSO app existence check passed. Checking content..."
-        check_pf_admin_app_content
-    fi
-}
-create_pf_admin_app
-
-#################################### Add attributes to PF Admin SSO App ####################################
-add_name_attr_try=0
-add_pfadmin_attr_try=0
-
-### Add pf-admin-role attribute to PingFederate Admin SSO App ###
-function check_pfadmin_attr_content() {
-    PF_ADMIN_ROLE_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .name')
-    if [ "$PF_ADMIN_ROLE_ATTR" != "pf-admin-role" ]; then
-        add_name_attr_try_left=$((api_call_retry_limit-add_name_attr_try))
-        echo "Unable to verify pf-admin-role attribute content, retrying $add_name_attr_try_left..."
-        add_pfadmin_attr_try=$((add_pfadmin_attr_try+1))
-        add_name_attr
-    else
-        echo "pf-admin-role attribute verified in PingFederate Admin SSO App configuration..."
-    fi
-}
-
-function add_pfadmin_attr() {
-    # add pf-admin-role to App
-    PF_ADMIN_ROLE_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .name')
-    if [ "$PF_ADMIN_ROLE_ATTR" != "pf-admin-role" ]; then
-        echo "pf-admin-role does not exist in the PingFederateAdmin SSO app configuration, adding now..."
-        APP_PF_ADMIN_ROLE=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
-        --header 'Content-Type: application/json' \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        --data-raw '{
-            "name": "pf-admin-role",
-            "value": "${user.pf-admin-role}",
-            "required": true
-        }')
-
-        APP_PF_ADMIN_ROLE_RESULT=$(echo $APP_PF_ADMIN_ROLE | sed 's@.*}@@')
-        if [[ $APP_PF_ADMIN_ROLE_RESULT == "201" ]]; then
-            echo "pf-admin-role attribute added to PingFederate Admin SSO app, beginning content check..."
-            check_pfadmin_attr_content
-        elif [[ $APP_PF_ADMIN_ROLE_RESULT != "201" ]] && [[ "$add_pfadmin_attr_try" < "$api_call_retry_limit" ]]; then
-            echo "pf-admin-role attribute NOT added to PingFederate Admin SSO app! Checking attribute existence..."
-            check_pfadmin_attr_content
-        else
-            echo "pf-admin-role attribute NOT added to PingFederate Admin SSO app and attempts to create exceeded!"
-            exit 1
-        fi
-    else
-        echo "pf-admin-role existence check passed, checking content..."
-        check_pfadmin_attr_content
-    fi
-}
-add_pfadmin_attr
 
 #################################### check, create, or set administrator population ####################################
 admin_pop_try=0
@@ -296,6 +107,258 @@ function check_admin_pop() {
 }
 check_admin_pop
 
+# #################################### Create PFAdmin Group ##################
+admin_group_try=0
+
+function check_admin_group_content() {
+    CHECK_PF_ADMIN_GROUP_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+    | jq -rc '._embedded.groups[] | select (.name=="PingFederate Administrators") | .name')
+    if [ "$CHECK_PF_ADMIN_GROUP_AGAIN" != "PingFederate Administrators" ]; then
+        admin_group_tries_left=$((api_call_retry_limit-admin_group_try))
+        echo "Unable to verify content... Retrying $admin_group_tries_left more time(s)..."
+        admin_group_try=$((admin_group_try+1))
+        create_admin_group
+    else
+        echo "PingFederate Administrators group exists and verified content, setting ID variable..."
+        PF_ADMIN_GROUP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        | jq -rc '._embedded.groups[] | select (.name=="PingFederate Administrators") | .id')
+
+        if [ -z ${PF_ADMIN_GROUP_ID+x} ]; then
+            echo "Unable to set PingFederate Administrators group ID, retrying..."
+            check_admin_group_content
+        else
+            echo "PingFederate Administrators group ID set correctly..."
+        fi
+    fi
+}
+
+function create_admin_group() {
+    # check if admin group already exists
+    CHECK_PF_ADMIN_GROUP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+    | jq -rc '._embedded.groups[] | select (.name=="PingFederate Administrators") | .name')
+
+    if [ "$CHECK_PF_ADMIN_GROUP" != "PingFederate Administrators" ]; then
+        # create PingFed Administrators group
+          CREATE_PF_ADMIN_GROUP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/groups" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN"  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data-raw '{
+                "name" : "PingFederate Administrators",
+                "description" : "User group for PingFed Admin SSO privileges.",
+                "userFilter": "population.id eq \"'"$ADMIN_POP_ID"'\""
+            }')
+        # checks group created, as well as verify expected group name to ensure creation
+        CREATE_PF_ADMIN_GROUP_RESULT=$(echo $CREATE_PF_ADMIN_GROUP | sed 's@.*}@@')
+        if [[ $CREATE_PF_ADMIN_GROUP_RESULT == "201" ]]; then
+            echo "PingFederate Administrators group added, beginning content check..."
+            check_admin_group_content
+        elif [[ $CREATE_PF_ADMIN_GROUP_RESULT != "201" ]] && [[ "$admin_group_try" < "$api_call_retry_limit" ]]; then
+            echo "PingFederate Administrators group NOT added! Checking group existence..."
+            check_admin_group_content
+        else
+            echo "PingFederate Administrators group does NOT exist and attempts to create exceeded!"
+            exit 1
+        fi
+    else
+        echo "PingFederate Administrators group existence check passed. Checking content..."
+        check_admin_group_content
+    fi
+}
+ create_admin_group
+
+#################################### Add Web OIDC App ####################################
+pf_admin_app_try=0
+
+function check_pf_admin_app_content() {
+    # check if Web OIDC App exists
+    CHECK_WEB_OIDC_APP_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
+    if [ "$CHECK_WEB_OIDC_APP_AGAIN" != "true" ]; then
+        admin_app_tries_left=$((api_call_retry_limit-pf_admin_app_try))
+        echo "Unable to verify content... Retrying $admin_app_tries_left..."
+        pf_admin_app_try=$((pf_admin_app_try+1))
+        create_pf_admin_app
+    else
+        echo "PingFederate Admin SSO app exists and verified content, setting variables to be used for later..."
+        # this is used for functions below as well as the oidc file section at the bottom
+        WEB_OIDC_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .id')
+        if [[ -z "$WEB_OIDC_APP_ID" ]] || [[ "$WEB_OIDC_APP_ID" == "" ]]; then
+            echo "PingFederate Admin SSO app ID unable to be set correctly, retrying..."
+            check_pf_admin_app_content
+        else
+            echo "PingFederate Admin SSO app ID set correctly..."
+        fi
+        # this is used in the run properties file section at the bottom
+        OIDC_APP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .name')
+        if [[ -z "$OIDC_APP_NAME" ]] || [[ "$OIDC_APP_NAME" == "" ]]; then
+            echo "PingFederate Admin SSO app name unable to be set correctly, retrying..."
+            check_pf_admin_app_content
+        else
+            echo "PingFederate Admin SSO app name set correctly..."
+        fi
+    fi
+}
+
+function create_pf_admin_app() {
+    # check if Web OIDC App exists
+    CHECK_WEB_OIDC_APP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
+    if [ "$CHECK_WEB_OIDC_APP" != "true" ]; then
+        echo "PingFederate Admin SSO does not exist, adding now..."
+        WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications" \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        --data-raw '{
+            "enabled": true,
+            "name": "PingFederate Admin SSO",
+            "#description": " ",
+            "type": "WEB_APP",
+            "accessControl": {
+            "role": {
+            "type": "ADMIN_USERS_ONLY"
+            },
+            "group": {
+            "type": "ANY_GROUP",
+            "groups": [
+                {
+                "id": "'"$PF_ADMIN_GROUP_ID"'"
+                }
+            ]
+            }
+            },
+            "protocol": "OPENID_CONNECT",
+            "grantTypes": [
+                "AUTHORIZATION_CODE"
+            ],
+            "redirectUris": [
+                "'"https://$PINGFED_BASE_URL:443/pingfederate/app?service=finishsso"'"
+            ],
+            "responseTypes": [
+                "CODE"
+            ],
+            "tokenEndpointAuthMethod": "CLIENT_SECRET_BASIC",
+            "pkceEnforcement": "OPTIONAL"
+        }')
+
+        # checks app created, as well as verify expected app name to ensure creation
+        WEB_OIDC_APP_RESULT=$(echo $WEB_OIDC_APP | sed 's@.*}@@')
+        if [[ $WEB_OIDC_APP_RESULT == "201" ]]; then
+            echo "PingFederate Admin SSO app added, beginning content check..."
+            check_pf_admin_app_content
+        elif [[ $WEB_OIDC_APP_RESULT != "201" ]] && [[ "$pf_admin_app_try" < "$api_call_retry_limit" ]]; then
+            echo "PingFederate Admin SSO app NOT added! Checking app existence..."
+            check_pf_admin_app_content
+        else
+            echo "PingFederate Admin SSO app does NOT exist and attempts to create exceeded!"
+            exit 1
+        fi
+    else
+        echo "PingFederate Admin SSO app existence check passed. Checking content..."
+        check_pf_admin_app_content
+    fi
+}
+create_pf_admin_app
+
+#################################### Add attributes to PF Admin SSO App ####################################
+add_name_attr_try=0
+
+### Add name attribute to PingFederate Admin SSO App ###
+function check_name_attr_content() {
+    CHECK_NAME_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="name") | .name')
+    if [ "$CHECK_NAME_ATTR" != "name" ]; then
+        add_name_attr_try_left=$((api_call_retry_limit-add_name_attr_try))
+        echo "Unable to verify name attribute content, retrying $add_name_attr_try_left more time(s) after this attempt..."
+        add_name_attr
+    else
+        echo "name attribute verified in PingFederate Admin SSO App configuration..."
+    fi
+}
+
+function add_name_attr() {
+    # add name attribute to App
+    NAME_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="name") | .name')
+    if [ "$NAME_ATTR" != "name" ]; then
+        echo "name attribute does not exist in the PingFederateAdmin SSO app configuration, adding now..."
+        APP_NAME_ATTR=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        --data-raw '{
+            "name": "name",
+            "value": "${user.name.formatted}",
+            "required": true
+        }')
+
+        APP_NAME_ATTR_RESULT=$(echo $APP_NAME_ATTR | sed 's@.*}@@')
+        if [[ $APP_NAME_ATTR_RESULT == "201" ]]; then
+            echo "name attribute added to PingFederate Admin SSO app, beginning content check..."
+            check_name_attr_content
+        elif [[ $APP_NAME_ATTR_RESULT != "201" ]] && [[ "$add_name_attr_try" < "$api_call_retry_limit" ]]; then
+            add_name_attr_try=$((add_name_attr_try+1))
+            echo "name attribute NOT added to PingFederate Admin SSO app! Checking attribute existence..."
+            check_name_attr_content
+        else
+            echo "name attribute NOT added to PingFederate Admin SSO app and attempts to create exceeded!"
+            exit 1
+        fi
+    else
+        echo "name existence check passed, checking content..."
+        check_name_attr_content
+    fi
+}
+add_name_attr
+
+### Add Group IDs attribute to PingFederate Admin SSO App ###
+add_groupid_attr_try=0
+
+function check_groupid_attr_content() {
+    GROUP_ID_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.memberOfGroupIDs}") | .value')
+    if [ "$GROUP_ID_ATTR" != '${user.memberOfGroupIDs}' ]; then
+        add_groupid_attr_tries_left=$((api_call_retry_limit-add_groupid_attr_try))
+        echo "Unable to verify Group ID attribute content, retrying $add_groupid_attr_tries_left more time(s) after this attempt..."
+        add_groupid_attr_try=$((add_groupid_attr_try+1))
+        add_name_attr
+    else
+        echo "Group ID attribute verified in PingFederate Admin SSO App configuration..."
+    fi
+}
+
+function add_groupid_attr() {
+    # add Group ID attribute to App
+    GROUP_ID_ATTR=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.memberOfGroupIDs}") | .value')
+    if [ "$GROUP_ID_ATTR" != '${user.memberOfGroupIDs}' ]; then
+        echo "Group ID attribute does not exist in the PingFederateAdmin SSO app configuration, adding now..."
+        APP_GROUP_ID=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        --data-raw '{
+            "name": "group_id",
+            "value": "${user.memberOfGroupIDs}",
+            "required": true
+        }')
+
+        APP_GROUP_ID_RESULT=$(echo $APP_GROUP_ID | sed 's@.*}@@')
+        if [[ $APP_GROUP_ID_RESULT == "201" ]]; then
+            echo "Group ID attribute added to PingFederate Admin SSO app, beginning content check..."
+            check_groupid_attr_content
+        elif [[ $APP_GROUP_ID_RESULT != "201" ]] && [[ "$add_pfadmin_attr_try" < "$api_call_retry_limit" ]]; then
+            echo "Group ID attribute NOT added to PingFederate Admin SSO app! Checking attribute existence..."
+            check_groupid_attr_content
+        else
+            echo "Group ID attribute NOT added to PingFederate Admin SSO app and attempts to create exceeded!"
+            exit 1
+        fi
+    else
+        echo "Group ID attribute existence check passed, checking content..."
+        check_groupid_attr_content
+    fi
+}
+add_groupid_attr
+
 #################################### create PingFederate admin SSO Account ####################################
 admin_account_try=0
 
@@ -323,7 +386,6 @@ function check_admin_accnt_content() {
     fi
 }
 
-
 function check_admin_accnt() {
     # get admin username
     ADMIN_ACCOUNT_UNAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/users" \
@@ -335,7 +397,7 @@ function check_admin_accnt() {
         --header 'content-type: application/vnd.pingidentity.user.import+json' \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         --data-raw '{
-        "email": "'"pingfederateadmin@$DOMAIN"'",
+        "email": "'"pingfederateadmin@pingidentity.com"'",
         "name": {
             "given": "Administrator",
             "family": "User"
@@ -343,7 +405,6 @@ function check_admin_accnt() {
         "lifecycle": {
             "status": "ACCOUNT_OK"
         },
-        "pf-admin-role": "fullAdmin",
         "population": {
             "id": "'"$ADMIN_POP_ID"'"
         },
@@ -496,10 +557,10 @@ function write_oidc_file_out {
         if [ $APP_CLIENT_SECRET_CHECK_RESULT == "200" ]; then
             echo "attributes found, setting other variables..."
             APP_USERNAME_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.name.formatted}") | .name')
-            APP_ATTR_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select (.name=="pf-admin-role") | .name' )
+            APP_ATTR_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.memberOfGroupIDs}") | .name' )
         elif [[ $APP_CLIENT_SECRET_CHECK_RESULT != "200" ]] && [[ "$attributes_try" < "$api_call_retry_limit" ]]; then
             attributes_tries_left=$((api_call_retry_limit-attributes_try))
-            echo "Unable to retrieve attributes, retrying $attributes_tries_left..."
+            echo "Unable to retrieve attributes, retrying $attributes_tries_left more time(s)..."
             attributes_try=$((attributes_try+1))
             attributes
         else
@@ -558,9 +619,9 @@ function write_oidc_file_out {
     echo "PF_OIDC_SCOPES=$APP_SCOPES" >> $OIDC_FILE
     echo "PF_OIDC_USERNAME_ATTRIBUTE_NAME=sub" >> $OIDC_FILE
     echo "PF_OIDC_ROLE_ATTRIBUTE_NAME=$APP_ATTR_NAME" >> $OIDC_FILE
-    echo "PF_OIDC_ROLE_ADMIN=$APP_ROLE_NAME" >> $OIDC_FILE
-    echo "PF_OIDC_ROLE_CRYPTOMANAGER=$APP_ROLE_NAME" >> $OIDC_FILE
-    echo "PF_OIDC_ROLE_USERADMIN=$APP_ROLE_NAME" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_ADMIN=$PF_ADMIN_GROUP_ID" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_CRYPTOMANAGER=$PF_ADMIN_GROUP_ID" >> $OIDC_FILE
+    echo "PF_OIDC_ROLE_USERADMIN=$PF_ADMIN_GROUP_ID" >> $OIDC_FILE
     echo "PF_OIDC_ROLE_EXPRESSIONADMIN=eadmin" >> $OIDC_FILE
     echo "PF_OIDC_ROLE_AUDITOR=" >> $OIDC_FILE
     echo "oidc.properties.tmp file written..."
