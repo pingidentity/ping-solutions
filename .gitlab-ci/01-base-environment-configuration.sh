@@ -35,7 +35,7 @@ echo "WF worker token is $WORKER_APP_ACCESS_TOKEN"
 
 #call BoM Script
 echo "###### Executing BoM Script against Workforce ######"
-"$sol_dir"/integration/solutions_pre-config.sh
+"$sol_dir"/integrations/solutions_pre-config.sh
 
 #performing initial PingOne WF creation scripts
 echo "Running WF PingFederate creation scripts."
@@ -65,7 +65,7 @@ echo "CIAM worker token is $WORKER_APP_ACCESS_TOKEN"
 
 #call BoM Script
 echo "###### Executing BoM Script against CIAM ######"
-"$sol_dir"/integration/solutions_pre-config.sh
+"$sol_dir"/integrations/solutions_pre-config.sh
 
 #performing initial PingOne WF creation scripts
 echo "Running CIAM PingFederate creation scripts."

@@ -58,8 +58,6 @@ describe('Creating new P14C environment', () => {
       cy.getIframeBody().find('[data-id="PING_ONE_VERIFY"]').trigger('mouseover');
       cy.getIframeBody().find('[data-id="select.btn"]').click();
       cy.getIframeBody().find('[data-id="next.btn"]').click();
-      //select already deployed
-      cy.getIframeBody().find('[type="radio"]').first().check({force: true});
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       cy.getIframeBody().find('#name').type("ENV_NM");
       cy.getIframeBody().find('[data-id="sample-data-checkbox"]').click();
