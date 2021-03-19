@@ -11,7 +11,7 @@
 echo "------ Beginning 201-auth_pol_set.sh ------"
 
 # set global api call retry limit - this can be set to desired amount, default is 2
-api_call_retry_limit=2
+api_call_retry_limit=1
 
 #set some individual counts
 self_reg_ct=0
@@ -50,8 +50,6 @@ function self_reg_pol () {
   --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
   | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Self-Registration_Login_Policy") | .id')
 
-  #limit retries
-  self_reg_ct=$((self_reg_ct+1))
   self_reg_action
 }
 
@@ -59,9 +57,11 @@ function self_reg_action () {
   #Create the self-reg action
   if [ -z ${SELF_POL_ID+x} ] && [[ "$self_reg_ct" < "$api_call_retry_limit" ]]; then
     self_reg_pol
-  elif [ -z ${SELF_POL_ID+x} ] && [[ "$self_reg_ct" > "$api_call_retry_limit" ]]; then
-    echo "Demo_Self-Registration_Login_Policy could not be set, exiting script."
-    exit 1
+  elif [ -z ${SELF_POL_ID+x} ] && [[ "$self_reg_ct" < "$api_call_retry_limit" ]]; then
+    self_reg_ct_left=$(api_call_retry_limit-self_reg_ct)
+    echo "Demo_Self-Registration_Login_Policy could not be set, retrying $self_reg_ct_left more time(s)..."
+    #limit retries
+    self_reg_ct=$((self_reg_ct+1))
   fi
   #perform the curl action
   echo "Creating Demo_Self-Registration_Login_Policy action."
@@ -158,7 +158,7 @@ function sms_action () {
   )
   #validate function success
   sms_action_val
-  
+
 }
 
 function sms_action_val () {
@@ -233,7 +233,7 @@ function any_method_passwordless_action () {
   )
   #validate function success
   any_method_action_val
-  
+
 }
 
 function any_method_action_val () {
@@ -299,7 +299,7 @@ function mfa_action_1 () {
     }'
   )
   mfa_action1_val
-  
+
 }
 
 function mfa_action1_val () {

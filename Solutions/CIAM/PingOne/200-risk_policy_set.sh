@@ -10,7 +10,7 @@
 echo "------ Beginning 200-risk_policy_set.sh ------"
 
 # set global api call retry limit - this can be set to desired amount, default is 2
-api_call_retry_limit=2
+api_call_retry_limit=1
 
 risk_pol_set=0
 
@@ -102,9 +102,6 @@ function set_risk_policy() {
   # check response code
   SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
 
-  #put a stop to the madness (potentially) by incrementing the total limit
-  risk_pol_set=$((risk_pol_set+1))
-
   #move on to call the check policy
   check_risk_policy
 }
@@ -120,6 +117,8 @@ function check_risk_policy() {
     if [ "$RISK_POL_STATUS" = "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
       echo "Verified Default CIAM Risk Policy set successfully..."
     elif [ "$RISK_POL_STATUS" != "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
+      #put a stop to the madness (potentially) by incrementing the total limit
+      risk_pol_set=$((risk_pol_set+1))
       set_risk_policy
     else
       echo "Default CIAM Risk Policy NOT set successfully!"
