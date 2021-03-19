@@ -33,16 +33,9 @@ echo "Environment ID is $ENV_ID"
 echo "API URL path is $API_LOCATION"
 echo "WF worker token is $WORKER_APP_ACCESS_TOKEN"
 
-#config script dir
-
-ls -l "$sol_dir"/WF/PingOne/*set.sh
-ls -l "$sol_dir"/WF/PingFederate/*set.sh
-#performing initial PingOne WF creation scripts
-echo "Running WF PingOne creation scripts."
-for script in "$sol_dir"/WF/PingOne/*set.sh; do
-  echo "Executing $script..."
-  bash $script 
-done
+#call BoM Script
+echo "###### Executing BoM Script against Workforce ######"
+"$sol_dir"/integration/solutions_pre-config.sh
 
 #performing initial PingOne WF creation scripts
 echo "Running WF PingFederate creation scripts."
@@ -70,13 +63,9 @@ echo "Environment ID is $ENV_ID"
 echo "API URL path is $API_LOCATION"
 echo "CIAM worker token is $WORKER_APP_ACCESS_TOKEN"
 
-#performing initial PingOne CIAM creation scripts
-echo "Running CIAM PingOne set scripts."
-#performing initial PingOne CIAM set scripts
-for script in "$sol_dir"/CIAM/PingOne/*set.sh; do
-  echo "Executing $script..."
-  bash $script 
-done
+#call BoM Script
+echo "###### Executing BoM Script against CIAM ######"
+"$sol_dir"/integration/solutions_pre-config.sh
 
 #performing initial PingOne WF creation scripts
 echo "Running CIAM PingFederate creation scripts."
