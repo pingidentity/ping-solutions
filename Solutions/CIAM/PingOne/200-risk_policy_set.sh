@@ -5,7 +5,6 @@
 # API_LOCATION
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
-
 #define script for job.
 echo "------ Beginning 200-risk_policy_set.sh ------"
 
@@ -13,6 +12,25 @@ echo "------ Beginning 200-risk_policy_set.sh ------"
 api_call_retry_limit=1
 
 risk_pol_set=0
+
+function check_risk_policy() {
+      # validate expected risk policy name change
+      RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
+      --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+      | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default CIAM Risk Policy") | .name')
+
+      # check expected name from config change
+      if [ "$RISK_POL_STATUS" = "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+        echo "Verified Default CIAM Risk Policy set successfully..."
+      elif [ "$RISK_POL_STATUS" != "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+        #put a stop to the madness (potentially) by incrementing the total limit
+        risk_pol_set=$((risk_pol_set+1))
+        set_risk_policy
+      else
+        echo "Default CIAM Risk Policy NOT set successfully!"
+        exit 1
+      fi
+}
 
 function set_risk_policy() {
   # Get Current Default Risk Policy
@@ -24,123 +42,106 @@ function set_risk_policy() {
   --header 'Content-Type: application/json' \
   --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
   --data-raw '{"name" : "Default CIAM Risk Policy",
-        "default" : true,
-        "canUseIntelligenceDataConsent": true,
-        "description" : "For Use with PingFederate",
-        "defaultResult" : {
+          "default" : true,
+          "canUseIntelligenceDataConsent": true,
+          "description" : "For Use with PingFederate",
+          "defaultResult" : {
           "level" : "LOW",
           "type" : "VALUE"
-        },
-        "riskPolicies" : [ {
+          },
+          "riskPolicies" : [ {
           "name" : "GEOVELOCITY_ANOMALY",
           "priority" : 1,
           "result" : {
-            "level" : "HIGH",
-            "type" : "VALUE"
+              "level" : "HIGH",
+              "type" : "VALUE"
           },
           "condition" : {
-            "equals" : true,
-            "value" : "${details.impossibleTravel}"
+              "equals" : true,
+              "value" : "${details.impossibleTravel}"
           }
-        },
-        {
+          },
+          {
           "name" : "MEDIUM_WEIGHTED_POLICY",
           "priority" : 2,
           "result" : {
-            "level" : "MEDIUM",
-            "type" : "VALUE"
+              "level" : "MEDIUM",
+              "type" : "VALUE"
           },
           "condition" : {
-            "between" : {
+              "between" : {
               "minScore" : 40,
               "maxScore" : 70
-            },
-            "aggregatedWeights" : [ {
+              },
+              "aggregatedWeights" : [ {
               "value" : "${details.aggregatedWeights.anonymousNetwork}",
               "weight" : 4
-            }, {
+              }, {
               "value" : "${details.aggregatedWeights.geoVelocity}",
               "weight" : 2
-            }, {
+              }, {
               "value" : "${details.aggregatedWeights.ipRisk}",
               "weight" : 5
-            }, {
+              }, {
               "value" : "${details.aggregatedWeights.userRiskBehavior}",
               "weight" : 0
-            } ]
+              } ]
           }
-        },
-        {
+          },
+          {
           "name" : "HIGH_WEIGHTED_POLICY",
           "priority" : 3,
           "result" : {
-            "level" : "HIGH",
-            "type" : "VALUE"
+              "level" : "HIGH",
+              "type" : "VALUE"
           },
           "condition" : {
-            "between" : {
+              "between" : {
               "minScore" : 70,
               "maxScore" : 100
-            },
-            "aggregatedWeights" : [ {
+              },
+              "aggregatedWeights" : [ {
               "value" : "${details.aggregatedWeights.anonymousNetwork}",
               "weight" : 4
-            }, {
+              }, {
               "value" : "${details.aggregatedWeights.geoVelocity}",
               "weight" : 2
-            }, {
+              }, {
               "value" : "${details.aggregatedWeights.ipRisk}",
               "weight" : 5
-            }, {
+              }, {
               "value" : "${details.aggregatedWeights.userRiskBehavior}",
               "weight" : 0
-            } ]
+              } ]
           }
-        } ]
+          } ]
   }')
 
-  # check response code
-  SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
-
-  #move on to call the check policy
-  check_risk_policy
-}
-
-function check_risk_policy() {
-  if [ "$SET_RISK_POL_NAME_RESULT" == "200" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
-    # validate expected risk policy name change
-    RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-    | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default CIAM Risk Policy") | .name')
-
-    # check expected name from config change
-    if [ "$RISK_POL_STATUS" = "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
-      echo "Verified Default CIAM Risk Policy set successfully..."
-    elif [ "$RISK_POL_STATUS" != "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
-      #put a stop to the madness (potentially) by incrementing the total limit
-      risk_pol_set=$((risk_pol_set+1))
-      set_risk_policy
+    # check response code
+    SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
+    if [ "$SET_RISK_POL_NAME_RESULT" == "200" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+        echo "Default CIAM Risk policy set, verifying content..."
+        # check_risk_policy
+    elif [[ "$SET_RISK_POL_NAME_RESULT" != "200" ]] &&  [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+        echo "Default CIAM Risk policy not set! Verifying content to see if already exists..."
+        check_risk_policy
     else
-      echo "Default CIAM Risk Policy NOT set successfully!"
-      exit 1
+        echo "Default CIAM Risk policy unable to be set!"
+        exit 1
     fi
-  else
-      echo "Something went wrong with setting the CIAM Risk Policy!"
-      exit 1
-  fi
+
 }
 
 function check_risk_enabled() {
-  #check if the environment is allowed to use Risk
-  RISK_ENABLED=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/capabilities" \
+#check if the environment is allowed to use Risk
+RISK_ENABLED=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/capabilities" \
   --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.canUseIntelligenceRisk')
 
   if [[ $RISK_ENABLED == true ]]; then
     #let's do the rest of this
     set_risk_policy
   else
-    echo "PingOne Risk Management is not enabled for this environment"
-    exit 0
+      echo "**** PingOne Risk Management is not enabled for this environment! ****"
   fi
 }
 
