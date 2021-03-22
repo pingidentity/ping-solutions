@@ -1,0 +1,60 @@
+#!/bin/bash
+
+#variables needed:
+#API_LOCATION
+#ENV_ID
+#WORKER_APP_ACCESS_TOKEN
+#PINGFED_BASE_URL
+#PF_USERNAME
+#PF_PASSWORD
+
+
+# set global api call retry limit - this can be set to desired amount, default is 2
+api_call_retry_limit=1
+
+#set some individual counts
+get_gw_ct=0
+del_gw_ct=0
+
+function get_gw () {
+    #get gateway ID
+    GET_GW_ID=$(curl --location --request GET "$API_LOCATION/environments/$ENV_ID/gateways" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        | jq -rc '._embedded.gateways[] | select(.name=="PING_FED-DEMO_Gateway") | .id')
+    if [[ "$GET_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]];then
+        del_gw
+    else
+        if [[ "$get_gw_ct" -lt "$api_call_retry_limit" ]]; then
+            echo "Gateway ID not found for PING_FED_DEMO_Gateway, retrying."
+            get_gw_ct=$((get_gw_ct+1))
+            get_gw
+        else   
+            echo "Gateway ID not found and limit reached."
+        fi
+    fi
+
+}
+function del_gw () {
+    #delete gw
+    DEL_GW=$(curl --location --request DELETE "$API_LOCATION/environments/$ENV_ID/gateways/$GET_GW_ID" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
+    #check that it's no longer found.
+    GET_GW_ID=$(curl --location --request GET "$API_LOCATION/environments/$ENV_ID/gateways" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        | jq -rc '._embedded.gateways[] | select(.name=="PING_FED-DEMO_Gateway") | .id')
+    if [ -z ${GET_GW_ID} ]; then
+        echo "Gateway deleted successfully."
+    else
+        echo "Gateway not deleted successfully."
+        if [[ "$del_gw_ct" -lt "$api_call_retry_limit" ]];then
+            echo "Retrying delete."
+            del_gw
+        else
+            echo "Retry limit exceeded and gateway deletion not successful. Exiting now."
+        exit 1
+        fi
+    fi
+}
+
+#start it all.
+get_gw
