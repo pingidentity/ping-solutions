@@ -16,6 +16,25 @@ function ciam() {
 
     risk_pol_set=0
 
+    function check_risk_policy() {
+        # validate expected risk policy name change
+        RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default CIAM Risk Policy") | .name')
+
+        # check expected name from config change
+        if [ "$RISK_POL_STATUS" = "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+            echo "Verified Default CIAM Risk Policy set successfully..."
+        elif [ "$RISK_POL_STATUS" != "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+            #put a stop to the madness (potentially) by incrementing the total limit
+            risk_pol_set=$((risk_pol_set+1))
+            set_risk_policy
+        else
+            echo "Default CIAM Risk Policy NOT set successfully!"
+            exit 1
+        fi
+    }
+
     function set_risk_policy() {
     # Get Current Default Risk Policy
     RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
@@ -101,35 +120,19 @@ function ciam() {
             } ]
     }')
 
-    # check response code
-    SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
-
-    #move on to call the check policy
-    check_risk_policy
-    }
-
-    function check_risk_policy() {
-    if [ "$SET_RISK_POL_NAME_RESULT" == "200" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
-        # validate expected risk policy name change
-        RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default CIAM Risk Policy") | .name')
-
-        # check expected name from config change
-        if [ "$RISK_POL_STATUS" = "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
-        echo "Verified Default CIAM Risk Policy set successfully..."
-        elif [ "$RISK_POL_STATUS" != "Default CIAM Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
-        #put a stop to the madness (potentially) by incrementing the total limit
-        risk_pol_set=$((risk_pol_set+1))
-        set_risk_policy
+        # check response code
+        SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
+        if [ "$SET_RISK_POL_NAME_RESULT" == "200" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+            echo "Default CIAM Risk policy set, verifying content..."
+            # check_risk_policy
+        elif [[ "$SET_RISK_POL_NAME_RESULT" != "200" ]] &&  [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+            echo "Default CIAM Risk policy not set! Verifying content to see if already exists..."
+            check_risk_policy
         else
-        echo "Default CIAM Risk Policy NOT set successfully!"
-        exit 1
+            echo "Default CIAM Risk policy unable to be set!"
+            exit 1
         fi
-    else
-        echo "Something went wrong with setting the CIAM Risk Policy!"
-        exit 1
-    fi
+
     }
 
     function check_risk_enabled() {
@@ -195,9 +198,9 @@ function ciam() {
 
     function self_reg_action () {
     #Create the self-reg action
-    if [ -z ${SELF_POL_ID+x} ] && [[ "$self_reg_ct" < "$api_call_retry_limit" ]]; then
+    if [ -z ${SELF_POL_ID+x} ] && [[ "$self_reg_ct" -lt "$api_call_retry_limit" ]]; then
         self_reg_pol
-    elif [ -z ${SELF_POL_ID+x} ] && [[ "$self_reg_ct" < "$api_call_retry_limit" ]]; then
+    elif [ -z ${SELF_POL_ID+x} ] && [[ "$self_reg_ct" -lt "$api_call_retry_limit" ]]; then
         self_reg_ct_left=$(api_call_retry_limit-self_reg_ct)
         echo "Demo_Self-Registration_Login_Policy could not be set, retrying $self_reg_ct_left more time(s)..."
         #limit retries
@@ -230,7 +233,7 @@ function ciam() {
     SELF_ACTION_VAL=$(echo $SELF_ACTION_CREATE | jq -rc '.registration.enabled')
     if [[ $SELF_ACTION_VAL == true ]]; then
         echo "Demo_Self-Registration_Login_Policy set successfully"
-    elif [ -z ${SELF_ACTION_VAL+x} ] && [[ "$self_reg_ct" < "$api_call_retry_limit" ]]; then
+    elif [ -z ${SELF_ACTION_VAL+x} ] && [[ "$self_reg_ct" -lt "$api_call_retry_limit" ]]; then
         self_reg_action
     else
         echo "Demo_Self-Registration_Login_Policy action could not be set, exiting script."
@@ -264,7 +267,7 @@ function ciam() {
 
     function sms_action () {
     #Create the SMS action
-    if [ -z ${SMS_POL_ID+x} ] && [[ "$passwordless_method_ct" < "$api_call_retry_limit" ]]; then
+    if [ -z ${SMS_POL_ID+x} ] && [[ "$passwordless_method_ct" -lt "$api_call_retry_limit" ]]; then
         passwordless_sms_pol
     elif [ -z ${SMS_POL_ID+x} ] && [[ "$passwordless_method_ct" > "$api_call_retry_limit" ]]; then
         echo "Demo_Passwordless_SMS_Login_Policy could not be set, exiting script."
@@ -305,7 +308,7 @@ function ciam() {
     SMS_ACTION_VAL=$(echo $SMS_ACTION_CREATE | jq -rc '.sms.enabled')
     if [[ $SMS_ACTION_VAL == true ]]; then
         echo "Demo_Passwordless_SMS_Login_Policy set successfully"
-    elif [ -z ${SMS_ACTION_VAL+x} ] && [[ "$passwordless_method_ct" < "$api_call_retry_limit" ]]; then
+    elif [ -z ${SMS_ACTION_VAL+x} ] && [[ "$passwordless_method_ct" -lt "$api_call_retry_limit" ]]; then
         sms_action
     else
         echo "Demo_Passwordless_SMS_Login_Policy action could not be set, exiting script."
@@ -339,7 +342,7 @@ function ciam() {
 
     function any_method_passwordless_action () {
     #Create the passwordless action
-    if [ -z ${ALL_MFA_POL_ID+x} ] && [[ "$any_method_ct" < "$api_call_retry_limit" ]]; then
+    if [ -z ${ALL_MFA_POL_ID+x} ] && [[ "$any_method_ct" -lt "$api_call_retry_limit" ]]; then
         any_method_passwordless_pol
     elif [ -z ${ALL_MFA_POL_ID+x} ] && [[ "$any_method_ct" > "$api_call_retry_limit" ]]; then
         echo "Demo_Passwordless_Any_Method_Login_Policy could not be set, exiting script."
@@ -380,7 +383,7 @@ function ciam() {
     ALL_MFA_ACTION_VAL=$(echo $ALL_MFA_ACTION_CREATE | jq -rc '.sms.enabled')
     if [[ $ALL_MFA_ACTION_VAL == true ]]; then
         echo "Demo_Passwordless_Any_Method_Login_Policy set successfully"
-    elif [ -z ${ALL_MFA_ACTION_VAL+x} ] && [[ "$any_method_ct" < "$api_call_retry_limit" ]]; then
+    elif [ -z ${ALL_MFA_ACTION_VAL+x} ] && [[ "$any_method_ct" -lt "$api_call_retry_limit" ]]; then
         sms_action
     else
         echo "Demo_Passwordless_Any_Method_Login_Policy action could not be set, exiting script."
@@ -414,7 +417,7 @@ function ciam() {
 
     function mfa_action_1 () {
     #Create the action (pt 1 of 2)
-    if [ -z ${MFA_POL_ID+x} ] && [[ "$mfa_ct" < "$api_call_retry_limit" ]]; then
+    if [ -z ${MFA_POL_ID+x} ] && [[ "$mfa_ct" -lt "$api_call_retry_limit" ]]; then
         mfa_pol
     elif [ -z ${MFA_POL_ID+x} ] && [[ "$mfa_ct" > "$api_call_retry_limit" ]]; then
         echo "Demo_Multi_Factor_Login_Policy could not be set, exiting script."
@@ -447,7 +450,7 @@ function ciam() {
     if [[ $MFA_ACTION1_VAL == true ]]; then
         echo "Demo_Multi_Factor_Login_Policy action 1 set successfully"
         mfa_action_2
-    elif [ -z ${MFA_ACTION1_VAL+x} ] && [[ "$mfa_ct" < "$api_call_retry_limit" ]]; then
+    elif [ -z ${MFA_ACTION1_VAL+x} ] && [[ "$mfa_ct" -lt "$api_call_retry_limit" ]]; then
         mfa_action_1
     else
         echo "Demo_Multi_Factor_Login_Policy action 1 could not be set, exiting script."
@@ -493,7 +496,7 @@ function ciam() {
     MFA_ACTION2_VAL=$(echo $MFA_ACTION_CREATE2 | jq -rc '.sms.enabled')
     if [[ $MFA_ACTION2_VAL == true ]]; then
         echo "Demo_Passwordless_SMS_Login_Policy set successfully"
-    elif [ -z ${MFA_ACTION2_VAL+x} ] && [[ "$mfa_ct" < "$api_call_retry_limit" ]]; then
+    elif [ -z ${MFA_ACTION2_VAL+x} ] && [[ "$mfa_ct" -lt "$api_call_retry_limit" ]]; then
         sms_action
     else
         echo "Demo_Passwordless_SMS_Login_Policy action could not be set, exiting script."
@@ -711,11 +714,61 @@ function ciam() {
         fi
     }
 
-    #call the functions above.
-    create_focus
-    create_slate
-    create_mural
-    create_split
+    # check if themes exist. if they don't, create them
+    theme_try=0
+    function get_themes() {
+        THEMES=$(curl -s --write-out "%{http_code}\n" --location --request GET "$API_LOCATION/environments/$ENV_ID/themes" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
+
+        # checks theme created, as well as verify expected theme name to ensure creation
+        THEMES_RESULT=$(echo $THEMES | sed 's@.*}@@')
+        THEMES_CONTENT=$(echo $THEMES | sed -e 's/}[0-9][0-9][0-9]/}/g')
+
+        if [[ "$THEMES_RESULT" == "200" ]] && [[ "$theme_try" -lt "$api_call_retry_limit" ]]; then
+            CHECK_SLATE_THEME_CONTENT=$(echo "$THEMES_CONTENT" | jq -rc '._embedded.themes[] | select(.template=="slate") | .configuration.name')
+            if [[ -z ${CHECK_SLATE_THEME_CONTENT+x} ]] || [[ "$CHECK_SLATE_THEME_CONTENT" != *"Ping Slate"* ]] ; then
+                echo "Ping Slate Template does not currently exist. Creating now..."
+                create_slate
+            elif [[ "$CHECK_SLATE_THEME_CONTENT" == *"Ping Slate"* ]]; then
+                echo "Ping Slate template already exists!"
+            fi
+
+            CHECK_SPLIT_THEME_CONTENT=$(echo "$THEMES_CONTENT"  | jq -rc '._embedded.themes[] | select(.template=="split") | .configuration.name')
+            if [[ -z ${CHECK_SPLIT_THEME_CONTENT+x} ]] || [[ "$CHECK_SPLIT_THEME_CONTENT" != *"Ping Split"* ]] ; then
+                echo "Ping Split Template does not currently exist. Creating now..."
+                create_split
+            elif [[ "$CHECK_SPLIT_THEME_CONTENT" == *"Ping Split"* ]]; then
+                echo "Ping Split template already exists!"
+            fi
+
+            CHECK_MURAL_THEME_CONTENT=$(echo "$THEMES_CONTENT"  | jq -rc '._embedded.themes[] | select(.template=="mural") | .configuration.name')
+            if [[ -z ${CHECK_MURAL_THEME_CONTENT+x} ]] || [[ "$CHECK_MURAL_THEME_CONTENT" != *"Ping Mural"* ]] ; then
+                echo "Ping Mural Template does not currently exist. Creating now..."
+                create_mural
+            elif [[ "$CHECK_MURAL_THEME_CONTENT" == *"Ping Mural"* ]]; then
+                echo "Ping Mural template already exists!"
+            fi
+
+            CHECK_FOCUS_THEME_CONTENT=$(echo "$THEMES_CONTENT"  | jq -rc '._embedded.themes[] | select(.template=="focus") | .configuration.name')
+            if [[ -z ${CHECK_FOCUS_THEME_CONTENT+x} ]] || [[ "$CHECK_FOCUS_THEME_CONTENT" != *"Ping Focus"* ]] ; then
+                echo "Ping Focus Template does not currently exist. Creating now..."
+                create_focus
+            elif [[ "$CHECK_FOCUS_THEME_CONTENT" == *"Ping Focus"* ]]; then
+                echo "Ping Focus template already exists!"
+            fi
+
+        elif [[ "$THEMES_RESULT" != "200" ]] && [[ "$theme_try" -lt "$api_call_retry_limit" ]]; then
+            theme_tries_left=$((api_call_retry_limit-theme_try))
+            echo "Unable to get themes, retrying $theme_tries_left more time(s)..."
+            theme_try=$((theme_try+1))
+            get_themes
+        else
+            echo "Unable to get themes and exceeded try limit!"
+            exit 1
+        fi
+    }
+
+    get_themes
 
     echo "------ End of Branding Theme set for CIAM ------"
 
@@ -727,7 +780,7 @@ function ciam() {
     function assign_signing_cert_id() {
         # checks cert is present
         SIGNING_CERT_KEYS_RESULT=$(echo $SIGNING_CERT_KEYS | sed 's@.*}@@')
-        if [[ "$SIGNING_CERT_KEYS_RESULT" == "200" ]] && [[ "$signing_key_id_try" < "$api_call_retry_limit" ]] ; then
+        if [[ "$SIGNING_CERT_KEYS_RESULT" == "200" ]] && [[ "$signing_key_id_try" -lt "$api_call_retry_limit" ]] ; then
             echo "Signing certificate key available, getting ID for signing certificate type..."
             # get signing cert id
             SIGNING_KEY_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/keys" \
@@ -738,7 +791,7 @@ function ciam() {
             else
                 echo "Signing certificate key ID set, proceeding..."
             fi
-        elif [[ $SIGNING_CERT_KEYS_RESULT != "200" ]] && [[ "$signing_key_id_try" < "$api_call_retry_limit" ]]; then
+        elif [[ $SIGNING_CERT_KEYS_RESULT != "200" ]] && [[ "$signing_key_id_try" -lt "$api_call_retry_limit" ]]; then
             signing_key_id_try=$((api_call_retry_limit-signing_key_id_try))
             echo "Unable to retrieve signing certificate key! Retrying $signing_key_id_try more time(s)..."
             signing_key_id_try=$((signing_key_id_try+1))
@@ -807,7 +860,7 @@ function ciam() {
         if [ $CREATE_SSR_APP_RESULT == "201" ]; then
             echo "Self-Service Registration demo app added, beginning content check..."
             check_ssr_app_content
-        elif [[ $CREATE_SSR_APP_RESULT != "201" ]] && [[ "$ssr_app_try" < "$api_call_retry_limit" ]]; then
+        elif [[ $CREATE_SSR_APP_RESULT != "201" ]] && [[ "$ssr_app_try" -lt "$api_call_retry_limit" ]]; then
             ssr_app_try=$((ssr_app_try+1))
             echo "Self-Service Registration demo app NOT added! Checking app existence..."
             check_ssr_app_content
@@ -869,7 +922,7 @@ function ciam() {
         if [ $CREATE_SMS_APP_RESULT == "201" ] ; then
             echo "Passwordless Login SMS Only app added, beginning content check..."
             check_sms_app_content
-        elif [[ $CREATE_SMS_APP_RESULT != "201" ]] && [[ "$sms_app_try" < "$api_call_retry_limit" ]]; then
+        elif [[ $CREATE_SMS_APP_RESULT != "201" ]] && [[ "$sms_app_try" -lt "$api_call_retry_limit" ]]; then
             sms_app_try=$((sms_app_try+1))
             echo "Passwordless Login SMS Only app NOT added! Checking app existence..."
             check_sms_app_content
@@ -930,7 +983,7 @@ function ciam() {
         if [ $CREATE_PWDLESS_APP_RESULT == "201" ] ; then
             echo "Passwordless Login Any Method app added, beginning content check..."
             check_pwdless_app_content
-        elif [[ $CREATE_PWDLESS_APP_RESULT != "201" ]] && [[ "$pwdless_app_try" < "$api_call_retry_limit" ]]; then
+        elif [[ $CREATE_PWDLESS_APP_RESULT != "201" ]] && [[ "$pwdless_app_try" -lt "$api_call_retry_limit" ]]; then
             pwdless_app_try=$((pwdless_app_try+1))
             echo "Passwordless Login Any Method app NOT added! Checking app existence..."
             check_pwdless_app_content
@@ -964,7 +1017,7 @@ function ciam() {
             else
                 echo "Self-Registration_Login_Policy ID set, proceeding..."
             fi
-        elif [[ $POLS_RESULT != "200" ]] && [[ "$self_pol_id_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ $POLS_RESULT != "200" ]] && [[ "$self_pol_id_try" -lt "$api_call_retry_limit" ]] ; then
             self_pol_id_tries=$((api_call_retry_limit-self_pol_id_try))
             echo "Unable to retrieve Self-Registration_Login_Policy! Retrying $self_pol_id_tries more time(s)..."
             self_pol_id_try=$((self_pol_id_try+1))
@@ -996,7 +1049,7 @@ function ciam() {
             echo "Self-Service Registration ID not found. Retrying $ssr_app_content_tries more time(s)..."
             ssr_app_content_try=$((ssr_app_content_try+1))
             check_ssr_app_content
-        elif [[ "$ssr_app_content_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ "$ssr_app_content_try" -lt "$api_call_retry_limit" ]] ; then
             # check policy ID matches the ID of the auth policy
             SELF_POL_SOA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$SSR_APP_ID/signOnPolicyAssignments" \
             --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -1016,7 +1069,7 @@ function ciam() {
     function assign_ssr_app() {
         # checks app is present
         APPS_RESULT=$(echo $APPS | sed 's@.*}@@')
-        if [[ "$APPS_RESULT" == "200" ]] && [[ "$ssr_app_try" < "$api_call_retry_limit" ]] && [[ "$ssr_app_pol_try" < "$api_call_retry_limit" ]] ; then
+        if [[ "$APPS_RESULT" == "200" ]] && [[ "$ssr_app_try" -lt "$api_call_retry_limit" ]] && [[ "$ssr_app_pol_try" -lt "$api_call_retry_limit" ]] ; then
             echo "Applications available, getting Self-Service Registration App ID..."
             # get ssr app id
             SSR_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
@@ -1048,7 +1101,7 @@ function ciam() {
                     check_ssr_app_content
                 fi
             fi
-        elif [[ $APPS_RESULT != "200" ]] && [[ "$ssr_app_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ $APPS_RESULT != "200" ]] && [[ "$ssr_app_try" -lt "$api_call_retry_limit" ]] ; then
             ssr_app_tries=$((api_call_retry_limit-ssr_app_try))
             echo "Unable to retrieve applications! Retrying $ssr_app_tries more time(s)..."
             ssr_app_try=$((ssr_app_try+1))
@@ -1084,7 +1137,7 @@ function ciam() {
             else
                 echo "Demo_Passwordless_SMS_Login_Policy ID set, proceeding..."
             fi
-        elif [[ $POLS_RESULT != "200" ]] && [[ "$sms_pol_id_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ $POLS_RESULT != "200" ]] && [[ "$sms_pol_id_try" -lt "$api_call_retry_limit" ]] ; then
             sms_pol_id_tries=$((api_call_retry_limit-sms_pol_id_try))
             echo "Unable to retrieve Demo_Passwordless_SMS_Login_Policy! Retrying $sms_pol_id_tries more time(s)..."
             sms_pol_id_try=$((sms_pol_id_try+1))
@@ -1116,7 +1169,7 @@ function ciam() {
             echo "Passwordless Login SMS Only ID not found. Retrying $sms_app_content_tries more time(s)..."
             sms_app_content_try=$((sms_app_content_try+1))
             check_sms_app_content
-        elif [[ "$sms_app_content_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ "$sms_app_content_try" -lt "$api_call_retry_limit" ]] ; then
             # check policy ID matches the ID of the auth policy
             SMS_POL_SOA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$SMS_APP_ID/signOnPolicyAssignments" \
             --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -1136,7 +1189,7 @@ function ciam() {
     function assign_sms_app() {
         # checks app is present
         APPS_RESULT=$(echo $APPS | sed 's@.*}@@')
-        if [[ "$APPS_RESULT" == "200" ]] && [[ "$sms_app_try" < "$api_call_retry_limit" ]] && [[ "$sms_app_pol_try" < "$api_call_retry_limit" ]] ; then
+        if [[ "$APPS_RESULT" == "200" ]] && [[ "$sms_app_try" -lt "$api_call_retry_limit" ]] && [[ "$sms_app_pol_try" -lt "$api_call_retry_limit" ]] ; then
             echo "Applications available, getting Passwordless Login SMS Only App ID..."
             # get sms app id
             SMS_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
@@ -1167,7 +1220,7 @@ function ciam() {
                     check_sms_app_content
                 fi
             fi
-        elif [[ $APPS_RESULT != "200" ]] && [[ "$sms_app_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ $APPS_RESULT != "200" ]] && [[ "$sms_app_try" -lt "$api_call_retry_limit" ]] ; then
             sms_app_tries=$((api_call_retry_limit-sms_app_try))
             echo "Unable to retrieve applications! Retrying $sms_app_tries more time(s)..."
             sms_app_try=$((sms_app_try+1))
@@ -1203,7 +1256,7 @@ function ciam() {
             else
                 echo "Demo_Passwordless_Any_Method_Login_Policy ID set, proceeding..."
             fi
-        elif [[ $POLS_RESULT != "200" ]] && [[ "$mfa_pol_id_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ $POLS_RESULT != "200" ]] && [[ "$mfa_pol_id_try" -lt "$api_call_retry_limit" ]] ; then
             mfa_pol_id_tries=$((api_call_retry_limit-mfa_pol_id_try))
             echo "Unable to retrieve policies! Retrying $mfa_pol_id_tries more time(s)..."
             mfa_pol_id_try=$((mfa_pol_id_try+1))
@@ -1235,7 +1288,7 @@ function ciam() {
             echo "Passwordless Login Any Method ID not found. Retrying $ssr_app_content_tries more time(s)..."
             mfa_app_content_try=$((mfa_app_content_try+1))
             check_mfa_app_content
-        elif [[ "$mfa_app_content_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ "$mfa_app_content_try" -lt "$api_call_retry_limit" ]] ; then
             # check policy ID matches the ID of the auth policy
             MFA_POL_SOA_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications/$MFA_APP_ID/signOnPolicyAssignments" \
             --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
@@ -1255,7 +1308,7 @@ function ciam() {
     function assign_mfa_app() {
         # checks app is present
         APPS_RESULT=$(echo $APPS | sed 's@.*}@@')
-        if [[ "$APPS_RESULT" == "200" ]] && [[ "$mfa_app_try" < "$api_call_retry_limit" ]] && [[ "$mfa_app_pol_try" < "$api_call_retry_limit" ]] ; then
+        if [[ "$APPS_RESULT" == "200" ]] && [[ "$mfa_app_try" -lt "$api_call_retry_limit" ]] && [[ "$mfa_app_pol_try" -lt "$api_call_retry_limit" ]] ; then
             echo "Applications available, getting Passwordless Login Any Method App ID..."
             # get sms app id
             MFA_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/applications" \
@@ -1286,7 +1339,7 @@ function ciam() {
                     check_mfa_app_content
                 fi
             fi
-        elif [[ $ASSIGN_MFA_APP_POL_RESULT != "200" ]] && [[ "$mfa_app_try" < "$api_call_retry_limit" ]] ; then
+        elif [[ $ASSIGN_MFA_APP_POL_RESULT != "200" ]] && [[ "$mfa_app_try" -lt "$api_call_retry_limit" ]] ; then
             mfa_app_tries=$((api_call_retry_limit-mfa_app_try))
             echo "Unable to retrieve applications! Retrying $mfa_app_tries more time(s)..."
             mfa_app_try=$((mfa_app_try+1))
@@ -1310,232 +1363,230 @@ function ciam() {
 }
 
 function workforce() {
-    echo "------ Beginning of Password Policy Set for WF ------"
-
-    # set global api call retry limit - this can be set to desired amount, default is 2
-    api_call_retry_limit=2
-
-    pass_pol_set=0
-
-    function set_password_policy() {
-    #get the id modifying
-    PASS_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
-    --header 'content-type: application/x-www-form-urlencoded' \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-    | jq -rc '._embedded.passwordPolicies[] | select(.name=="Passphrase") | .id')
-
-    #set the change
-    PASS_POL_SET=$(curl -s --location --request PUT "$API_LOCATION/environments/$ENV_ID/passwordPolicies/$PASS_POL_ID" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN " \
-    --header 'Content-Type: application/json' \
-    --data-raw '{
-        "id" : "'"$PASS_POL_ID"'",
-            "environment" : {
-            "id" : "'"$ENV_ID"'"
-            },
-            "name" : "Passphrase",
-            "description" : "A policy that encourages the use of passphrases",
-            "excludesProfileData" : true,
-            "notSimilarToCurrent" : true,
-            "excludesCommonlyUsed" : true,
-            "maxRepeatedCharacters": 2,
-            "minComplexity" : 7,
-            "maxAgeDays" : 182,
-            "minAgeDays" : 1,
-            "history" : {
-            "count" : 6,
-            "retentionDays" : 365
-            },
-            "length": {
-            "min": 8,
-            "max": 255
-            },
-            "lockout" : {
-            "failureCount" : 5,
-            "durationSeconds" : 900
-            },
-            "default" : true
-        }')
-
-    #put a stop to the madness (potentially) by incrementing the total limit
-    pass_pol_set=$((pass_pol_set+1))
-
-    #execute the function
-    check_password_policy
-    }
-
-    #check that things lookg accurate
-    function check_password_policy() {
-    if [ -z ${PASS_POL_SET+x} ] && [[ "$pass_pol_set" -lt "$api_call_retry_limit" ]]; then
-        echo "Password policy ID not found, retrying"
-        set_password_policy
-    elif [ -z ${PASS_POL_SET+x} ] && [[ "$pass_pol_set" -ge "$api_call_retry_limit" ]]; then
-        echo "Password policy ID not found, retry limit exceeded."
-        exit 1
-    else
-        #check that it's set as expected
-        PASS_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
-        --header 'content-type: application/x-www-form-urlencoded' \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        | jq -rc '._embedded.passwordPolicies[] | select(.name=="Passphrase") | .default')
-
-        #verify set true
-        if [ "$PASS_POL_STATUS" = true ]; then
-        echo "Passphrase policy set successfully..."
-        else
-        echo "Passphrase policy not set successfully!"
-        exit 1
-        fi
-    fi
-    }
-
-    #execute the function
-    set_password_policy
-
-    echo "------ End of Password Policy Set for WF ------"
-
-    echo "------ Beginning Risk Policy Set for WF ------"
 
     # set global api call retry limit - this can be set to desired amount, default is 2
     api_call_retry_limit=1
+
+    echo "------ Beginning Risk Policy Set for WF ------"
+
     risk_pol_set=0
 
-    function set_risk_policy() {
-    # Get Current Default Risk Policy
-    RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default Risk Policy") | .id')
-
-    # Set Default Risk Policy to Workforce Name
-    SET_RISK_POL_NAME=$(curl -s --write-out "%{http_code}\n" --location --request PUT "$API_LOCATION/environments/$ENV_ID/riskPolicySets/$RISK_POL_SET_ID" \
-    --header 'Content-Type: application/json' \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-    --data-raw '{"name" : "Default Workforce High Risk Policy",
-            "default" : true,
-            "canUseIntelligenceDataConsent": true,
-            "description" : "Workforce Risk Policy",
-            "defaultResult" : {
-            "level" : "LOW",
-            "type" : "VALUE"
-            },
-            "riskPolicies" : [ {
-            "name" : "GEOVELOCITY_ANOMALY",
-            "priority" : 1,
-            "result" : {
-                "level" : "HIGH",
-                "type" : "VALUE"
-            },
-            "condition" : {
-                "equals" : true,
-                "value" : "${details.impossibleTravel}"
-            }
-            },
-            {
-            "name" : "MEDIUM_WEIGHTED_POLICY",
-            "priority" : 2,
-            "result" : {
-                "level" : "MEDIUM",
-                "type" : "VALUE"
-            },
-            "condition" : {
-                "between" : {
-                "minScore" : 40,
-                "maxScore" : 70
-                },
-                "aggregatedWeights" : [ {
-                "value" : "${details.aggregatedWeights.anonymousNetwork}",
-                "weight" : 4
-                }, {
-                "value" : "${details.aggregatedWeights.geoVelocity}",
-                "weight" : 2
-                }, {
-                "value" : "${details.aggregatedWeights.ipRisk}",
-                "weight" : 5
-                }, {
-                "value" : "${details.aggregatedWeights.userRiskBehavior}",
-                "weight" : 10
-                } ]
-            }
-            },
-            {
-            "name" : "HIGH_WEIGHTED_POLICY",
-            "priority" : 3,
-            "result" : {
-                "level" : "HIGH",
-                "type" : "VALUE"
-            },
-            "condition" : {
-                "between" : {
-                "minScore" : 70,
-                "maxScore" : 100
-                },
-                "aggregatedWeights" : [ {
-                "value" : "${details.aggregatedWeights.anonymousNetwork}",
-                "weight" : 4
-                }, {
-                "value" : "${details.aggregatedWeights.geoVelocity}",
-                "weight" : 2
-                }, {
-                "value" : "${details.aggregatedWeights.ipRisk}",
-                "weight" : 5
-                }, {
-                "value" : "${details.aggregatedWeights.userRiskBehavior}",
-                "weight" : 10
-                } ]
-            }
-            } ]
-    }')
-
-    # check response code
-    SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
-
-
-
-    #move on to call the check policy
-    check_risk_policy
-    }
-
     function check_risk_policy() {
-    if [ "$SET_RISK_POL_NAME_RESULT" == "200" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
         # validate expected risk policy name change
         RISK_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default Workforce High Risk Policy") | .name')
 
         # check expected name from config change
-        if [ "$RISK_POL_STATUS" = "Default Workforce High Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
-        echo "Verified Default Workforce High Risk Policy set successfully..."
-        elif [ "$RISK_POL_STATUS" != "Default Workforce High Risk Policy" ] && [[ "$risk_pol_set" < "$api_call_retry_limit" ]]; then
+        if [ "$RISK_POL_STATUS" = "Default Workforce High Risk Policy" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+            echo "Verified Default Workforce High Risk Policy set successfully..."
+        elif [ "$RISK_POL_STATUS" != "Default Workforce High Risk Policy" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
             #put a stop to the madness (potentially) by incrementing the total limit
             risk_pol_set=$((risk_pol_set+1))
             set_risk_policy
         else
-        echo "Default Workforce High Risk Policy NOT set successfully!"
-        exit 1
+            echo "Default Workforce High Risk Policy NOT set successfully!"
+            exit 1
         fi
-    else
-        echo "Something went wrong with setting the Default Workforce High Risk Policy!"
-        exit 1
-    fi
+    }
+
+    function set_risk_policy() {
+        # Get Current Default Risk Policy
+        RISK_POL_SET_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/riskPolicySets" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.riskPolicySets[]  | select(.name=="Default Risk Policy") | .id')
+
+        SET_RISK_POL_NAME=$(curl -s --write-out "%{http_code}\n" --location --request PUT "$API_LOCATION/environments/$ENV_ID/riskPolicySets/$RISK_POL_SET_ID" \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        --data-raw '{"name" : "Default Workforce High Risk Policy",
+                "default" : true,
+                "canUseIntelligenceDataConsent": true,
+                "description" : "Workforce Risk Policy",
+                "defaultResult" : {
+                "level" : "LOW",
+                "type" : "VALUE"
+                },
+                "riskPolicies" : [ {
+                "name" : "GEOVELOCITY_ANOMALY",
+                "priority" : 1,
+                "result" : {
+                    "level" : "HIGH",
+                    "type" : "VALUE"
+                },
+                "condition" : {
+                    "equals" : true,
+                    "value" : "${details.impossibleTravel}"
+                }
+                },
+                {
+                "name" : "MEDIUM_WEIGHTED_POLICY",
+                "priority" : 2,
+                "result" : {
+                    "level" : "MEDIUM",
+                    "type" : "VALUE"
+                },
+                "condition" : {
+                    "between" : {
+                    "minScore" : 40,
+                    "maxScore" : 70
+                    },
+                    "aggregatedWeights" : [ {
+                    "value" : "${details.aggregatedWeights.anonymousNetwork}",
+                    "weight" : 4
+                    }, {
+                    "value" : "${details.aggregatedWeights.geoVelocity}",
+                    "weight" : 2
+                    }, {
+                    "value" : "${details.aggregatedWeights.ipRisk}",
+                    "weight" : 5
+                    }, {
+                    "value" : "${details.aggregatedWeights.userRiskBehavior}",
+                    "weight" : 10
+                    } ]
+                }
+                },
+                {
+                "name" : "HIGH_WEIGHTED_POLICY",
+                "priority" : 3,
+                "result" : {
+                    "level" : "HIGH",
+                    "type" : "VALUE"
+                },
+                "condition" : {
+                    "between" : {
+                    "minScore" : 70,
+                    "maxScore" : 100
+                    },
+                    "aggregatedWeights" : [ {
+                    "value" : "${details.aggregatedWeights.anonymousNetwork}",
+                    "weight" : 4
+                    }, {
+                    "value" : "${details.aggregatedWeights.geoVelocity}",
+                    "weight" : 2
+                    }, {
+                    "value" : "${details.aggregatedWeights.ipRisk}",
+                    "weight" : 5
+                    }, {
+                    "value" : "${details.aggregatedWeights.userRiskBehavior}",
+                    "weight" : 10
+                    } ]
+                }
+                } ]
+        }')
+
+        # check response code
+        SET_RISK_POL_NAME_RESULT=$(echo $SET_RISK_POL_NAME | sed 's@.*}@@' )
+        if [ "$SET_RISK_POL_NAME_RESULT" == "200" ] && [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+            echo "Default Workforce High Risk Policy policy set, verifying content..."
+            check_risk_policy
+        elif [[ "$SET_RISK_POL_NAME_RESULT" != "200" ]] &&  [[ "$risk_pol_set" -lt "$api_call_retry_limit" ]]; then
+            echo "Default Workforce High Risk Policy not set! Verifying content to see if already exists..."
+            check_risk_policy
+        else
+            echo "Default Workforce High Risk Policy unable to be set!"
+            exit 1
+        fi
     }
 
     function check_risk_enabled() {
-    #check if the environment is allowed to use Risk
-    RISK_ENABLED=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/capabilities" \
-    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.canUseIntelligenceRisk')
+        #check if the environment is allowed to use Risk
+        RISK_ENABLED=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/capabilities" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.canUseIntelligenceRisk')
 
-    if [[ $RISK_ENABLED == true ]]; then
-        #let's do the rest of this
-        set_risk_policy
-    else
-        echo "PingOne Risk Management is not enabled for this environment"
-        exit 0
-    fi
+        if [[ $RISK_ENABLED == true ]]; then
+            #let's do the rest of this
+            set_risk_policy
+        else
+            echo "PingOne Risk Management is not enabled for this environment"
+            exit 0
+        fi
     }
     #check it's enabled (will attempt execute all functions if it is).
     check_risk_enabled
 
     #script finish
     echo "------ End of Risk Policy Set for WF ------"
+
+    echo "------ Beginning of Password Policy Set for WF ------"
+
+    pass_pol_set=0
+
+    #check that things lookg accurate
+    function check_password_policy() {
+        if [ -z ${PASS_POL_SET+x} ] && [[ "$pass_pol_set" -lt "$api_call_retry_limit" ]]; then
+            echo "Password policy ID not found, retrying"
+            set_password_policy
+        elif [ -z ${PASS_POL_SET+x} ] && [[ "$pass_pol_set" -ge "$api_call_retry_limit" ]]; then
+            echo "Password policy ID not found, retry limit exceeded."
+            exit 1
+        else
+            #check that it's set as expected
+            PASS_POL_STATUS=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
+            --header 'content-type: application/x-www-form-urlencoded' \
+            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+            | jq -rc '._embedded.passwordPolicies[] | select(.name=="Passphrase") | .default')
+
+            #verify set true
+            if [ "$PASS_POL_STATUS" = true ]; then
+                echo "Passphrase policy set successfully..."
+            else
+                echo "Passphrase policy not set successfully!"
+                exit 1
+            fi
+        fi
+    }
+
+    function set_password_policy() {
+        #get the id modifying
+        PASS_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/passwordPolicies" \
+        --header 'content-type: application/x-www-form-urlencoded' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        | jq -rc '._embedded.passwordPolicies[] | select(.name=="Passphrase") | .id')
+
+        #set the change
+        PASS_POL_SET=$(curl -s --location --request PUT "$API_LOCATION/environments/$ENV_ID/passwordPolicies/$PASS_POL_ID" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN " \
+        --header 'Content-Type: application/json' \
+        --data-raw '{
+            "id" : "'"$PASS_POL_ID"'",
+                "environment" : {
+                "id" : "'"$ENV_ID"'"
+                },
+                "name" : "Passphrase",
+                "description" : "A policy that encourages the use of passphrases",
+                "excludesProfileData" : true,
+                "notSimilarToCurrent" : true,
+                "excludesCommonlyUsed" : true,
+                "maxRepeatedCharacters": 2,
+                "minComplexity" : 7,
+                "maxAgeDays" : 182,
+                "minAgeDays" : 1,
+                "history" : {
+                "count" : 6,
+                "retentionDays" : 365
+                },
+                "length": {
+                "min": 8,
+                "max": 255
+                },
+                "lockout" : {
+                "failureCount" : 5,
+                "durationSeconds" : 900
+                },
+                "default" : true
+            }')
+
+        #put a stop to the madness (potentially) by incrementing the total limit
+        pass_pol_set=$((pass_pol_set+1))
+
+        #execute the function
+        check_password_policy
+    }
+
+    #execute the function
+    set_password_policy
+
+    echo "------ End of Password Policy Set for WF ------"
 
     echo "------ Beginning User Populations for WF ------"
 
@@ -1549,8 +1600,6 @@ function workforce() {
     more_sample_set=0
 
     function get_user_pop_id() {
-        #increment
-        user_pop_get=$((user_pop_get+1))
         # get Sample Users population name
         SAMPLE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Sample Users") | .name')
@@ -1559,28 +1608,40 @@ function workforce() {
         MORE_SAMPLE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="More Sample Users") | .name')
 
+        # get Employees population name
+        EMPLOYEE_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Employees") | .name')
+
+        # get Contractors population name
+        CONTRACTOR_USERS_POP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/populations" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.populations[] | select(.name=="Contractors") | .name')
+
         #if all right set variables and move on.
-        if [[ $SAMPLE_USERS_POP == "Sample Users" ]] && [[ $MORE_SAMPLE_USERS_POP == "More Sample Users" ]]; then
-            echo "User populations found successfully."
+        if [[ "$SAMPLE_USERS_POP" == "Sample Users" ]] && [[ "$MORE_SAMPLE_USERS_POP" == "More Sample Users" ]]; then
+            echo "Expected Populations found successfully..."
             SAMPLE_POPS[0]="$SAMPLE_USERS_POP"
             SAMPLE_POPS[1]="$MORE_SAMPLE_USERS_POP"
             #call the next function to do the work
             set_user_pop
-        #if either isn't set and limit is below number of runtimes
-        elif ([[ $SAMPLE_USERS_POP != "Sample Users" ]] || [[ $MORE_SAMPLE_USERS_POP != "More Sample Users" ]]) && [[ "$user_pop_set" < "$api_call_retry_limit" ]]; then
-            echo "Sample Users population or More Sample Users population not found. Retrying."
-            user_pop_set=$((user_pop_set+1))
-            get_user_pop_id
-        #out of tries and one or both not set
-        elif ([[ $SAMPLE_USERS_POP != "Sample Users" ]] || [[ $MORE_SAMPLE_USERS_POP != "More Sample Users" ]]) && [[ "$user_pop_set" -ge "$api_call_retry_limit" ]]; then
-            echo "One or both population(s) not found and number of allowed runs exceeded, exiting now."
-            exit 1
+        elif [[ "$EMPLOYEE_USERS_POP" == "Employees" ]] && [[ "$CONTRACTOR_USERS_POP" == "Contractors" ]]; then
+            SAMPLE_POPS[0]="$EMPLOYEE_USERS_POP"
+            SAMPLE_POPS[1]="$CONTRACTOR_USERS_POP"
+            echo "Workforce use-case Employees and Contractors populations already exist..."
+        else
+            if [[ "$user_pop_set" -lt "$api_call_retry_limit" ]]; then
+                echo "Sample Users population or More Sample Users population not found. Retrying."
+                user_pop_set=$((user_pop_set+1))
+                get_user_pop_id
+            #out of tries and one or both not set
+            else
+                echo "One or both population(s) not found and number of allowed runs exceeded, exiting now."
+                exit 1
+            fi
         fi
     }
 
     function set_user_pop() {
-        #increment
-        user_pop_set=$((user_pop_set+1))
+
         for SAMPLE_POP in "${SAMPLE_POPS[@]}"; do
 
             # check if name matches Sample Users population
@@ -1613,11 +1674,12 @@ function workforce() {
                             echo "Sample Users population successfully updated to Contractors..."
                         else
                             echo "Sample Users population updated, however unable to verify new name change!"
+                            get_user_pop_id
                         fi
                     fi
                 #if unset or null, rerun if within limit
                 elif ([ -z ${SAMPLE_USERS_POP_ID+x} ] || [[ "$SAMPLE_USERS_POP_ID" == 'null' ]]) \
-                && [[ "$sample_set" < "$api_call_retry_limit" ]] && [[ "$User_pop_set" < "$api_call_retry_limit" ]]; then
+                && [[ "$sample_set" -lt "$api_call_retry_limit" ]] && [[ "$User_pop_set" -lt "$api_call_retry_limit" ]]; then
                     #retry!
                     sample_set=$((sample_set+1))
                     set_user_pop
@@ -1657,11 +1719,12 @@ function workforce() {
                             echo "More Sample Users population successfully updated to Employees..."
                         else
                             echo "More Sample Users population updated, however unable to verify new name change!"
+                            get_user_pop_id
                         fi
                     fi
                 #if unset or null, rerun if within limit
                 elif ([ -z ${MORE_SAMPLE_USERS_POP_NAME+x} ] || [[ "$MORE_SAMPLE_USERS_POP_NAME" == 'null' ]]) \
-                && [[ "$more_sample_set" < "$api_call_retry_limit" ]] && [[ "$User_pop_set" < "$api_call_retry_limit" ]]; then
+                && [[ "$more_sample_set" -lt "$api_call_retry_limit" ]] && [[ "$User_pop_set" -lt "$api_call_retry_limit" ]]; then
                     #retry!
                     more_sample_set=$((more_sample_set+1))
                     set_user_pop
@@ -1681,6 +1744,7 @@ function workforce() {
     get_user_pop_id
 
     echo "------ End of User Populations Set for WF ------"
+
     echo "###### COMPLETED WF SOLUTIONS PRE-CONFIG TASKS ######"
 }
 

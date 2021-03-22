@@ -9,7 +9,8 @@
 
 echo "------ Beginning 500-branding_theme_set.sh ------"
 
-api_call_retry_limit=2
+# set global api call retry limit - this can be set to desired amount, default is 2
+api_call_retry_limit=1
 
 create_focus_ct=0
 create_slate_ct=0
@@ -213,10 +214,60 @@ function create_split() {
     fi
 }
 
-#call the functions above.
-create_focus
-create_slate
-create_mural
-create_split
+# check if themes exist. if they don't, create them
+theme_try=0
+function get_themes() {
+    THEMES=$(curl -s --write-out "%{http_code}\n" --location --request GET "$API_LOCATION/environments/$ENV_ID/themes" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
+
+    # checks theme created, as well as verify expected theme name to ensure creation
+    THEMES_RESULT=$(echo $THEMES | sed 's@.*}@@')
+    THEMES_CONTENT=$(echo $THEMES | sed -e 's/}[0-9][0-9][0-9]/}/g')
+
+    if [[ "$THEMES_RESULT" == "200" ]] && [[ "$theme_try" -lt "$api_call_retry_limit" ]]; then
+        CHECK_SLATE_THEME_CONTENT=$(echo "$THEMES_CONTENT" | jq -rc '._embedded.themes[] | select(.template=="slate") | .configuration.name')
+        if [[ -z ${CHECK_SLATE_THEME_CONTENT+x} ]] || [[ "$CHECK_SLATE_THEME_CONTENT" != *"Ping Slate"* ]] ; then
+            echo "Ping Slate Template does not currently exist. Creating now..."
+            create_slate
+        elif [[ "$CHECK_SLATE_THEME_CONTENT" == *"Ping Slate"* ]]; then
+            echo "Ping Slate template already exists!"
+        fi
+
+        CHECK_SPLIT_THEME_CONTENT=$(echo "$THEMES_CONTENT"  | jq -rc '._embedded.themes[] | select(.template=="split") | .configuration.name')
+        if [[ -z ${CHECK_SPLIT_THEME_CONTENT+x} ]] || [[ "$CHECK_SPLIT_THEME_CONTENT" != *"Ping Split"* ]] ; then
+            echo "Ping Split Template does not currently exist. Creating now..."
+            create_split
+        elif [[ "$CHECK_SPLIT_THEME_CONTENT" == *"Ping Split"* ]]; then
+            echo "Ping Split template already exists!"
+        fi
+
+        CHECK_MURAL_THEME_CONTENT=$(echo "$THEMES_CONTENT"  | jq -rc '._embedded.themes[] | select(.template=="mural") | .configuration.name')
+        if [[ -z ${CHECK_MURAL_THEME_CONTENT+x} ]] || [[ "$CHECK_MURAL_THEME_CONTENT" != *"Ping Mural"* ]] ; then
+            echo "Ping Mural Template does not currently exist. Creating now..."
+            create_mural
+        elif [[ "$CHECK_MURAL_THEME_CONTENT" == *"Ping Mural"* ]]; then
+            echo "Ping Mural template already exists!"
+        fi
+
+        CHECK_FOCUS_THEME_CONTENT=$(echo "$THEMES_CONTENT"  | jq -rc '._embedded.themes[] | select(.template=="focus") | .configuration.name')
+        if [[ -z ${CHECK_FOCUS_THEME_CONTENT+x} ]] || [[ "$CHECK_FOCUS_THEME_CONTENT" != *"Ping Focus"* ]] ; then
+            echo "Ping Focus Template does not currently exist. Creating now..."
+            create_focus
+        elif [[ "$CHECK_FOCUS_THEME_CONTENT" == *"Ping Focus"* ]]; then
+            echo "Ping Focus template already exists!"
+        fi
+
+    elif [[ "$THEMES_RESULT" != "200" ]] && [[ "$theme_try" -lt "$api_call_retry_limit" ]]; then
+        theme_tries_left=$((api_call_retry_limit-theme_try))
+        echo "Unable to get themes, retrying $theme_tries_left more time(s)..."
+        theme_try=$((theme_try+1))
+        get_themes
+    else
+        echo "Unable to get themes and exceeded try limit!"
+        exit 1
+    fi
+}
+
+get_themes
 
 echo "------ End 500-branding_theme_set.sh ------"
