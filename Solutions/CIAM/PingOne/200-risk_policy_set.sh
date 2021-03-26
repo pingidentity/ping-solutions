@@ -8,7 +8,7 @@
 #define script for job.
 echo "------ Beginning 200-risk_policy_set.sh ------"
 
-# set global api call retry limit - this can be set to desired amount, default is 2
+ # set global api call retry limit - this can be set to desired amount, default is 2
 api_call_retry_limit=1
 
 risk_pol_set=0
