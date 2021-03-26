@@ -6,7 +6,6 @@
 # API_LOCATION
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
-
 function ciam() {
     #define script for job.
     echo "------ Beginning Risk Policy Set for CIAM ------"
@@ -1643,6 +1642,7 @@ function workforce() {
     function set_user_pop() {
 
         for SAMPLE_POP in "${SAMPLE_POPS[@]}"; do
+            echo "$SAMPLE_POP"
 
             # check if name matches Sample Users population
             if [ "$SAMPLE_POP" == "Sample Users" ]; then
