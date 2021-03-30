@@ -1,0 +1,99 @@
+#!/bin/bash
+
+#variables needed:
+#API_LOCATION
+#ENV_ID
+#WORKER_APP_ACCESS_TOKEN
+#PINGFED_BASE_URL
+#PF_USERNAME
+#PF_PASSWORD
+
+
+# set global api call retry limit - this can be set to desired amount, default is 2
+api_call_retry_limit=1
+
+#set some individual counts
+create_gw_ct=0
+create_gw_cred_ct=0
+
+function make_gw() {
+    #create the gateway and set the id to this variable.
+    CREATE_GW_ID=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/gateways" \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        --data-raw '{
+          "name": "PING_FED-DEMO_Gateway",
+          "description": "Gateway connection linking PingFederate to PingOne. See https://apidocs.pingidentity.com/pingone/platform/v1/api/#gateway-management.",
+          "type": "PING_FEDERATE",
+          "enabled": true
+        }' | jq -rc .id)
+    #regex check if set to a uuid
+    if [[ "$CREATE_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        echo "PING_FED-DEMO_Gateway create successfully."
+        make_gw_cred
+    else
+        #check if we're at the limit or not. if not retry.
+        if [[ "$create_gw_ct" -lt "$api_call_retry_limit" ]]; then
+            echo "Gateway was not created successfully, retrying."
+            create_gw_ct=$((creat_gw_ct+1))
+            make_gw
+        else
+            echo "Gateway was not created successfully and tries exceeded limit. Exiting now."
+            exit 1
+        fi
+    fi
+}
+
+function make_gw_cred () {
+    #create the gateway credential to tie to PF
+    CREATE_GW_CRED=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/gateways/$CREATE_GW_ID/credentials" \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | \
+        jq -rc '.credential')
+    #check if set
+    if [[ "$CREATE_GW_CRED" -ne "null" ]] && [ -z ${CREATE_GW_CRED+x} ]; then
+        echo "Gateway credential created successfully, passing to PF."
+        link_pf_p1
+    else
+        #check if we're at the limit or not. if not retry.
+        if [[ "$create_gw_cred_ct" -lt "$api_call_retry_limit" ]]; then
+            echo "Gateway credential not created, retrying."
+            make_gw_cred
+        else
+            echo "Gateway credential not created successfully and tries exceeded limit. Exiting now."
+            exit 1
+        fi
+    fi
+}
+
+function link_pf_p1 () {
+    #encode PF credentials
+    PF_CRED=$(echo -n "$PF_USERNAME:$PF_PASSWORD" | base64)
+    #create link in PF
+    GW_LINK=$(curl -s --location --request POST "$PINGFED_BASE_URL:9999/pf-admin-api/v1/pingOneConnections" \
+        --header 'Content-Type: application/json' \
+        --header 'X-XSRF-Header: pingfederate' \
+        --header "Authorization: Basic $PF_CRED" \
+        --data-raw '{
+          "name": "PING_ONE_to_PING_FED_DEMO_Gateway",
+          "active": true,
+          "credential": "'"$CREATE_GW_CRED"'"
+        }')
+    if [[ "$GW_LINK" == *"PING_ONE_to_PING_FED_DEMO_Gateway"* ]]; then
+        #great success!
+        echo "Gateway created successfully in PingFederate."
+    else    
+        #check if we're at the limit or not. if not retry.
+        if [[ "$link_gw_ct" -lt "$api_call_retry_limit" ]]; then
+            echo "Gateway not linked successfully in Ping Federate, retrying."
+            link_gw_ct=$((link_gw_ct+1))
+            link_pf_pf
+        else   
+            echo "Gateway not linked successfully in Ping Federate and tries exceeded limit. Exiting now."
+            exit 1
+        fi
+    fi
+}
+
+#start everything up
+make_gw
