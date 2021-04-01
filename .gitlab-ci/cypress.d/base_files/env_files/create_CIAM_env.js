@@ -49,14 +49,14 @@ describe('Creating new P14C environment', () => {
       }
       cy.getIframeBody().find('[data-id="add.env"]').click();
       cy.getIframeBody().find('[data-id="customers"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_BASE"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_MFA"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_RISK"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_VERIFY"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ONE_BASE"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ONE_MFA"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ONE_RISK"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ONE_VERIFY"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       //cy.getIframeBody().find('input[name="product-setup-PING_ONE_BASE"]').first().check({ force: true });
       //cy.getIframeBody().find('input[name="product-setup-PING_ONE_MFA"]').first().check({ force: true });
@@ -66,7 +66,7 @@ describe('Creating new P14C environment', () => {
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       cy.getIframeBody().find('#name').type("ENV_NM");
       cy.getIframeBody().find('[data-id="sample-data-checkbox"]').click();
-      cy.getIframeBody().find('#description').type(". Demo environment generated using Cypress.io.");
+      cy.getIframeBody().find('#description').type("Demo environment generated using Cypress.io.");
       cy.getIframeBody().find('#license').select('None');
       //we need to make sure the correct license is selected. Will need work to work with a P1 trial license.
       cy.getIframeBody().find('select[id=license] > option').contains('LIC_TYPE').then(element => cy.getIframeBody().find('#license').select(element.val()))
