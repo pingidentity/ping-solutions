@@ -9,6 +9,9 @@
 # PF_USERNAME
 # PF_PASSWORD
 # PINGFED_BASE_URL
+# ISSUER_ENDPOINT
+
+AS_ENDPOINT=$(echo "$ISSUER_ENDPOINT" | sed -e "s@/as@/$ENV_ID/as@")
 
 function pingfeddie() {
     #define script for job.
@@ -573,7 +576,7 @@ function pingfeddie() {
         # get, set oidc content, this is very important for creating the file later
         oauth_cons_try=0
         function oidc_content() {
-            OIDC_APP_OAUTH_CONTENT_CHECK=$(curl -s --write-out "%{http_code}\n" --location --request GET "https://auth.pingone.com/$ENV_ID/as/.well-known/openid-configuration")
+            OIDC_APP_OAUTH_CONTENT_CHECK=$(curl -s --write-out "%{http_code}\n" --location --request GET "$AS_ENDPOINT/.well-known/openid-configuration")
             OIDC_APP_OAUTH_CONTENT_CHECK_RESULT=$(echo $OIDC_APP_OAUTH_CONTENT_CHECK | sed 's@.*}@@')
             if [ $OIDC_APP_OAUTH_CONTENT_CHECK_RESULT == "200" ]; then
                 echo "openid configuration content found, setting to be used for other variables..."
