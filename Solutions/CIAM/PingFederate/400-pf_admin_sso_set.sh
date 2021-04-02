@@ -288,7 +288,7 @@ function add_name_attr() {
         --data-raw '{
             "name": "name",
             "value": "${user.name.formatted}",
-            "required": true
+            "required": false
         }')
 
         APP_NAME_ATTR_RESULT=$(echo $APP_NAME_ATTR | sed 's@.*}@@')

@@ -70,7 +70,7 @@ function link_pf_p1 () {
     #encode PF credentials
     PF_CRED=$(echo -n "$PF_USERNAME:$PF_PASSWORD" | base64)
     #create link in PF
-    GW_LINK=$(curl -s --location --request POST "$PINGFED_BASE_URL:9999/pf-admin-api/v1/pingOneConnections" \
+    GW_LINK=$(curl -s --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/pingOneConnections" \
         --header 'Content-Type: application/json' \
         --header 'X-XSRF-Header: pingfederate' \
         --header "Authorization: Basic $PF_CRED" \

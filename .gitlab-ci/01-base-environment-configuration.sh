@@ -33,16 +33,34 @@ echo "Environment ID is $ENV_ID"
 echo "API URL path is $API_LOCATION"
 echo "WF worker token is $WORKER_APP_ACCESS_TOKEN"
 
+#finessse the BoM
+PFeddy_add=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/billOfMaterials" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "products": [
+    {
+      "type": "PING_FEDERATE"
+    },
+    {
+        "type": "PING_ONE_VERIFY"
+    },
+    {
+        "type": "PING_ONE_BASE"
+    },
+    {
+        "type": "PING_ID"
+    },
+    {
+        "type": "PING_ONE_RISK"
+    }
+  ]
+}')
+
 #call BoM Script
 echo "###### Executing BoM Script against Workforce ######"
 "$sol_dir"/integrations/solutions_pre-config.sh
-
-#performing initial PingOne WF creation scripts
-echo "Running WF PingFederate creation scripts."
-for script in "$sol_dir"/WF/PingFederate/*set.sh; do
-  echo "Executing $script..."
-  bash $script 
-done
+"$sol_dir"/integrations/solutions_p1_pf_pre-config.sh
 
 #CCCCCCCCIIIIIIIIIAAAAAAAAAMMMMMMMMM
 
@@ -63,15 +81,33 @@ echo "Environment ID is $ENV_ID"
 echo "API URL path is $API_LOCATION"
 echo "CIAM worker token is $WORKER_APP_ACCESS_TOKEN"
 
+#finessse the BoM
+PFeddy_add=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/billOfMaterials" \
+--header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "products": [
+    {
+      "type": "PING_FEDERATE"
+    },
+    {
+        "type": "PING_ONE_VERIFY"
+    },
+    {
+        "type": "PING_ONE_BASE"
+    },
+    {
+        "type": "PING_ONE_MFA"
+    },
+    {
+        "type": "PING_ONE_RISK"
+    }
+  ]
+}')
+
 #call BoM Script
 echo "###### Executing BoM Script against CIAM ######"
 "$sol_dir"/integrations/solutions_pre-config.sh
-
-#performing initial PingOne WF creation scripts
-echo "Running CIAM PingFederate creation scripts."
-for script in "$sol_dir"/CIAM/PingFederate/*set.sh; do
-  echo "Executing $script..."
-  bash $script 
-done
+"$sol_dir"/integrations/solutions_p1_pf_pre-config.sh
 
 echo "Finished 01-base-environment-configuration.sh"
