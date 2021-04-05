@@ -1,5 +1,8 @@
 #!/bin/bash
 # Script to test PingOne instance against trial specifications
+
+set -eo pipefail
+
 echo "Executing 02-cypress-substitution.sh"
 
 #set the dir location

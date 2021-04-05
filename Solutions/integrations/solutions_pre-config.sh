@@ -1642,7 +1642,6 @@ function workforce() {
     function set_user_pop() {
 
         for SAMPLE_POP in "${SAMPLE_POPS[@]}"; do
-            echo "$SAMPLE_POP"
 
             # check if name matches Sample Users population
             if [ "$SAMPLE_POP" == "Sample Users" ]; then

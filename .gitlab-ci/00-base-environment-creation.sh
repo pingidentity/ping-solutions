@@ -1,5 +1,8 @@
 #!/bin/bash
 # Script to configure PingOne instance to trial specifications
+#wes is a punk
+
+set -eo pipefail
 
 echo "Starting 00-base-configuration-work.sh"
 
