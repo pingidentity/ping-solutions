@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 echo "Executing 01-base-environment-configuration.sh"
 
 #gimme jq
@@ -60,6 +62,7 @@ PFeddy_add=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/b
 #call BoM Script
 echo "###### Executing BoM Script against Workforce ######"
 "$sol_dir"/integrations/solutions_pre-config.sh
+"$sol_dir"/integrations/solutions_pf_pre-config.sh
 "$sol_dir"/integrations/solutions_p1_pf_pre-config.sh
 
 #CCCCCCCCIIIIIIIIIAAAAAAAAAMMMMMMMMM
@@ -108,6 +111,7 @@ PFeddy_add=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/b
 #call BoM Script
 echo "###### Executing BoM Script against CIAM ######"
 "$sol_dir"/integrations/solutions_pre-config.sh
+"$sol_dir"/integrations/solutions_pf_pre-config.sh
 "$sol_dir"/integrations/solutions_p1_pf_pre-config.sh
 
 echo "Finished 01-base-environment-configuration.sh"

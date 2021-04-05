@@ -1,6 +1,8 @@
 #!/bin/bash
 # Script to revert features and types
 
+set -xeo pipefail
+
 echo "Starting 03-base-environment-revert.sh"
 
 #set the dir location
