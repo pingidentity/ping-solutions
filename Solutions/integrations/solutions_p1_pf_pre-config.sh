@@ -43,17 +43,25 @@ function pingfeddie() {
     }')
 
     if [[ "$PF_WORKER_GEN" != *"createdAt"* ]] && [[ "$pf_worker_ct" -lt "$api_call_retry_limit" ]];then
+      if [[ "$PF_WORKER_GEN" == *"name already exists"* ]];then
+        echo "PingFed worker app already exists, getting existing ID."
+        #if it's already there we'll reuse it.
+        PF_WORKER_CLIENT_ID=$(echo "$PF_WORKER_GEN" | jq -rc '.details[].innerError.existingId')
+                
+        #get the secret
+        pf_secret_check
+      else
         pf_worker_ct=$((pf_worker_ct+1))
         pingfeddie
+      fi
     else
         echo "PingFed worker app created successfully."
+        #get id
+        PF_WORKER_CLIENT_ID=$(echo "$PF_WORKER_GEN" | jq -rc '.id')
+
+        #get the secret
+        pf_secret_check
     fi
-
-    #get id
-    PF_WORKER_CLIENT_ID=$(echo "$PF_WORKER_GEN" | jq -rc '.id')
-
-    #get the secret
-    pf_secret_check
 }
 
 
@@ -135,7 +143,7 @@ function link_pf_p1 () {
     #encode PF credentials
     PF_CRED=$(echo -n "$PF_USERNAME:$PF_PASSWORD" | base64)
     #create link in PF
-    GW_LINK=$(curl -s --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/pingOneConnections" \
+    GW_LINK=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/pingOneConnections" \
         --header 'Content-Type: application/json' \
         --header 'X-XSRF-Header: pingfederate' \
         --header "Authorization: Basic $PF_CRED" \
@@ -173,7 +181,7 @@ function create_risk_adapter () {
     PF_CRED=$(echo -n "$PF_USERNAME:$PF_PASSWORD" | base64)
 
     #pulling to use this for further info. This gets the pingone connection info from PingFed(using for env info)
-    GW_INFO=$(curl -s --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/pingOneConnections" \
+    GW_INFO=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/pingOneConnections" \
             --header 'Content-Type: application/json' \
         --header 'X-XSRF-Header: pingfederate' \
         --header "Authorization: Basic $PF_CRED" )
@@ -191,7 +199,7 @@ function create_risk_adapter () {
     fi
 
     #create demo p1 risk adapter in PF
-    RISK_ADAPTER=$(curl -s --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
+    RISK_ADAPTER=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
     --header 'Content-Type: application/json' \
     --header 'X-XSRF-Header: pingfederate' \
     --header "Authorization: Basic $PF_CRED" \
@@ -318,7 +326,7 @@ function create_mfa_adapter () {
     PF_CRED=$(echo -n "$PF_USERNAME:$PF_PASSWORD" | base64)
 
     #pulling to use this for further info.
-    GW_INFO=$(curl -s --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/pingOneConnections" \
+    GW_INFO=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/pingOneConnections" \
             --header 'Content-Type: application/json' \
         --header 'X-XSRF-Header: pingfederate' \
         --header "Authorization: Basic $PF_CRED" )
@@ -332,7 +340,7 @@ function create_mfa_adapter () {
     | jq -rc '._embedded.populations[] | select(.name=="Sample Users") | .id')
 
     #create demo p1 mfa adapter in PF
-    MFA_ADAPTER=$(curl -s --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
+    MFA_ADAPTER=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
     --header 'Content-Type: application/json' \
     --header 'X-XSRF-Header: pingfederate' \
     --header "Authorization: Basic $PF_CRED" \
@@ -566,14 +574,14 @@ function verify_ds() {
     fi
 }
 function check_ds() {
-    CHECK_DS_NAME=$(curl -s --location --request GET "https://$PINGFED_BASE_URL/pf-admin-api/v1/dataStores" \
+    CHECK_DS_NAME=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/dataStores" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" | jq -rc '.items[] | select(.name=="Demo LDAP Data Store") | .name')
 }
 ####################################### Add Active Directory Data Store #######################################
 
 function create_ds() {
-    DS_ID=$(curl -s --location --request POST "https://$PINGFED_BASE_URL/pf-admin-api/v1/dataStores" \
+    DS_ID=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/dataStores" \
         --header "X-XSRF-Header: PASS" \
         --header 'X-BypassExternalValidation: true' \
         --header "Authorization: Basic $PF_CRED" \
@@ -615,7 +623,7 @@ function verify_pcv() {
 }
 
 function check_pcv() {
-    CHECK_PCV_NAME=$(curl -s --location --request GET "https://$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators" \
+    CHECK_PCV_NAME=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" | jq -rc '.items[] | select(.name=="DemoPCV") | .name')
 }
@@ -623,7 +631,7 @@ function check_pcv() {
 ####################################### Create LDAP Password Credential Validator #######################################
 
 function create_pcv() {
-    PCV_ID=$(curl -s --location --request POST "https://$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators" \
+    PCV_ID=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators" \
             --header 'X-XSRF-Header: PASS' \
             --header 'X-BypassExternalValidation: true' \
             --header "Authorization: Basic $PF_CRED" \
@@ -633,7 +641,7 @@ function create_pcv() {
             "name": "DemoPCV",
             "pluginDescriptorRef": {
                 "id": "org.sourceid.saml20.domain.LDAPUsernamePasswordCredentialValidator",
-                "location": "'"https://$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators/descriptors/org.sourceid.saml20.domain.LDAPUsernamePasswordCredentialValidator"'"
+                "location": "'"$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators/descriptors/org.sourceid.saml20.domain.LDAPUsernamePasswordCredentialValidator"'"
             },
             "configuration": {
                 "fields": [
@@ -661,9 +669,11 @@ np_try=0
 
 function verify_notification_publisher {
     # Checks for Notification Publisher ID to verify if Notification Publisher is created.
-    if [[ $NP_ID =~ ^[A-Za-z0-9]{1,33}$ ]] && [[ $NP_ID != null ]]; then
-        echo "Created Notification Publisher..."
-    elif ([[ -z ${NP_ID+x} ]] || [[ "$NP_ID" == "null" ]]) && [[ "$np_try" -lt "$api_call_retry_limit" ]]; then
+    if [[ "$NP_ID" == "DemoSMTP" ]]; then
+      echo "Created Notification Publisher..."
+    #check if either unset/null/or if NP_SET returns id already exists
+    elif [[ -z ${NP_ID+x} ]] || [[ "$NP_ID" == "null" ]] || [[ $NP_SET == *"already defined"* ]]; then
+      if [[ "$np_try" -lt "$api_call_retry_limit" ]]; then
         check_notification_publisher
         if [[ "$CHECK_NP_NAME" == "DemoSMTP" ]]; then
             echo "Notificiation Publisher with $CHECK_NP_NAME name already exists..."
@@ -673,6 +683,7 @@ function verify_notification_publisher {
             np_try=$((np_try_try+1))
             create_notification_publisher
         fi
+      fi
     else
         echo "Notification Publisher not created and exceeded try limit!"
         exit 1
@@ -680,7 +691,7 @@ function verify_notification_publisher {
 }
 
 function check_notification_publisher() {
-    CHECK_NP_NAME=$(curl -s --location --request GET "https://$PINGFED_BASE_URL/pf-admin-api/v1/notificationPublishers" \
+    CHECK_NP_NAME=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/notificationPublishers" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" | jq -rc '.items[] | select(.name=="DemoSMTP") | .name')
 }
@@ -688,7 +699,7 @@ function check_notification_publisher() {
 ######################################## Create Notiifcation Publisher #######################################
 
 function create_notification_publisher {
-    NP_ID=$(curl -s --location --request POST "https://$PINGFED_BASE_URL/pf-admin-api/v1/notificationPublishers" \
+    NP_SET=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/notificationPublishers" \
         --header 'X-XSRF-Header: PASS' \
         --header 'X-BypassExternalValidation: true' \
         --header "Authorization: Basic $PF_CRED" \
@@ -715,7 +726,10 @@ function create_notification_publisher {
                 }
                 ]
             }
-        }' | jq -rc '.id')
+        }')
+    #split this in case already exists
+    NP_ID=$(echo $NP_SET | jq -rc '.id')
+    #next step
     verify_notification_publisher
 }
 create_notification_publisher
@@ -745,7 +759,7 @@ function verify_adapter() {
 }
 
 function check_htmlform() {
-    CHECK_HTML_FORM_NAME=$(curl -s --location --request GET "https://$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
+    CHECK_HTML_FORM_NAME=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" | jq -rc '.items[] | select(.name=="SampleHtmlForm") | .name')
 }
@@ -753,7 +767,7 @@ function check_htmlform() {
 
 function create_adapter() {
 
-    CREATE_ADAPTER=$(curl -s --write-out "%{http_code}\n" --location --request POST "https://$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
+    CREATE_ADAPTER=$(curl -s --write-out "%{http_code}\n" --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
                 --header 'X-XSRF-Header: PASS' \
                 --header 'X-BypassExternalValidation: true' \
                 --header "Authorization: Basic $PF_CRED" \
@@ -834,13 +848,13 @@ function verify_cidr() {
 }
 #Checks for PCV name to see if PCV with the same name exists
 function check_cidr() {
-    CHECK_CIDR_NAME=$(curl -s --location --request GET "https://$PINGFED_BASE_URL/pf-admin-api/v1/authenticationSelectors" \
+    CHECK_CIDR_NAME=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/authenticationSelectors" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" | jq -rc '.items[] | select(.name=="CIDRdemo") | .name')
 }
 # Create CIDR Selector
 function create_cidr() {
-    CIDR_ID=$(curl -s --location --request POST "https://$PINGFED_BASE_URL/pf-admin-api/v1/authenticationSelectors" \
+    CIDR_ID=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/authenticationSelectors" \
         --header 'X-XSRF-Header: PASS' \
         --header 'X-BypassExternalValidation: true' \
         --header "Authorization: Basic $PF_CRED" \
@@ -896,13 +910,13 @@ function verify_pingid() {
 }
 #Checks for PingID adapter to see if the adapter  with the same name exists
 function check_pingid() {
-    CHECK_PINGID_NAME=$(curl -s --location --request GET "https://$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
+    CHECK_PINGID_NAME=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" | jq -rc '.items[] | select(.name=="SamplePingID") | .name')
 }
 # Create PingID adapter
 function create_pingid() {
-    PINGID_ID=$(curl -s --location --request POST "https://$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
+    PINGID_ID=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" \
     --header 'Content-Type: application/json' \
@@ -931,7 +945,7 @@ create_pingid
 
 # Check to see if Authentication Policy with the same name exists
 function check_authnpolicy() {
-    VERIFY_POLICY_NAME=$(curl -s --location --request GET "https://$PINGFED_BASE_URL/pf-admin-api/v1/authenticationPolicies/default" \
+    VERIFY_POLICY_NAME=$(curl -s -k --location --request GET "$PINGFED_BASE_URL/pf-admin-api/v1/authenticationPolicies/default" \
     --header 'X-XSRF-Header: PASS' \
     --header "Authorization: Basic $PF_CRED" | jq -rc '.authnSelectionTrees[] | select(.name=="CIDR Demo Policy") | .name')
 }
@@ -959,7 +973,7 @@ function set_authnpolicy() {
     if [[ "$VERIFY_POLICY_NAME" == "CIDR Demo Policy" ]]; then
     echo "Authenticaion Policy with $VERIFY_POLICY_NAME name already exists..."
     else
-        SET_POLICY=$(curl -s --write-out "%{http_code}\n" --location --request PUT "https://$PINGFED_BASE_URL/pf-admin-api/v1/authenticationPolicies/default" \
+        SET_POLICY=$(curl -s --write-out "%{http_code}\n" --location --request PUT "$PINGFED_BASE_URL/pf-admin-api/v1/authenticationPolicies/default" \
         --header 'X-XSRF-Header: PASS' \
         --header 'X-BypassExternalValidation: true' \
         --header "Authorization: Basic $PF_CRED" \
