@@ -118,26 +118,11 @@ WF-test-reverted-state:
     paths:
       - "./cypress/videos/"
 
-CIAM-env-cleanup:
+env-cleanup:
   stage: 04-back-from-the-moon
   when: always
   script:
-    #run delete environment script for CIAM
-    - npx cypress run --spec "./cypress/integration/CIAM/*delete*.js" --browser chrome --headless
-  dependencies:
-    - configure-solution
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"
-
-WF-env-cleanup:
-  stage: 04-back-from-the-moon
-  when: always
-  script:
-    #run delete environment script for WF
-    - npx cypress run --spec "./cypress/integration/WF/*delete*.js" --browser chrome --headless
+    - "./.gitlab-ci/04-base-environment-deletion.sh"
   dependencies:
     - configure-solution
   artifacts:
