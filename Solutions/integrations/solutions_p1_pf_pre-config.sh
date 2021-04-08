@@ -24,7 +24,7 @@ function pingfeddie() {
     --data-raw '{
         "enabled": true,
         "name": "Demo PingFed Worker App",
-        "description": "PingFederate Worker App. Used to showcase Ping Federate and Ping One integration capabilities for Demo purposes.",
+        "description": "PingFederate Worker App. Used to showcase Ping Federate and Ping One integration capabilities for Demo purposes. This worker app can be used to configure things such as the Ping Federate MFA adapter betweeen PingOne and PingFederate.",
         "type": "WORKER",
         "protocol": "OPENID_CONNECT",
         "tags": [
@@ -60,7 +60,8 @@ function pingfeddie() {
         PF_WORKER_CLIENT_ID=$(echo "$PF_WORKER_GEN" | jq -rc '.id')
 
         #get the secret
-        pf_secret_check
+        #commenting out temporarily until permissions problem is sorted out with p14c api client.
+        #pf_secret_check
     fi
 }
 
@@ -540,9 +541,10 @@ if [[ "$BOM_RESULT" == *"PING_ONE_RISK"* ]]; then
 fi
 
 #only run MFA if enabled. CIAM only at this time. Will have respective one for PingID in the future.
-if [[ "$BOM_RESULT" == *"PING_ONE_MFA"* ]]; then
-    create_mfa_adapter
-fi
+#commenting out for now due to perm problems.
+#if [[ "$BOM_RESULT" == *"PING_ONE_MFA"* ]]; then
+#    create_mfa_adapter
+#fi
 
 echo "------ End of PingFederate adapter setup ------"
 
