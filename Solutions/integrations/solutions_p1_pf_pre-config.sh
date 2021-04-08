@@ -10,7 +10,7 @@
 # PF_USERNAME
 # PF_PASSWORD
 
-echo "###### Beginning of Solutions PingFederate Pre-Config Tasks ######"
+echo "###### Beginning of Solutions PingOne PingFederate Pre-Config Tasks ######"
 
 echo "------ Beginning PingFederate P1 worker app creation ------"
 
@@ -92,7 +92,7 @@ create_gw_cred_ct=0
 
 function make_gw() {
     #create the gateway and set the id to this variable.
-    CREATE_GW_ID=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/gateways" \
+    CREATE_GW=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/gateways" \
         --header 'Content-Type: application/json' \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         --data-raw '{
@@ -100,11 +100,25 @@ function make_gw() {
           "description": "Gateway connection linking PingFederate to PingOne. See https://apidocs.pingidentity.com/pingone/platform/v1/api/#gateway-management.",
           "type": "PING_FEDERATE",
           "enabled": true
-        }' | jq -rc .id)
-    #regex check if set to a uuid
-    if [[ "$CREATE_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        }')
+        
+    CREATE_GW_ID=$(echo $CREATE_GW | jq -rc .id)
+    CREATE_GW_UNIQUENESS=$(echo $CREATE_GW | jq -rc '.details[]?.code')
+
+    #regex check if set to a uuid, uniqueness check if not unique.
+    if [[ "$CREATE_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]] \
+        && [[ "$CREATE_GW_UNIQUENESS" != "UNIQUENESS_VIOLATION" ]]; then
         echo "PING_FED-DEMO_Gateway create successfully."
         make_gw_cred
+    elif [[ "$CREATE_GW_UNIQUENESS" == "UNIQUENESS_VIOLATION" ]]; then
+        #script was interupted before completion, gateway exists already. Grabbing that id.
+        CREATE_GW_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/gateways" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        | jq -rc '._embedded.gateways[] | select(.name=="PING_FED-DEMO_Gateway") | .id')
+        if [[ "$CREATE_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+          echo "PING_FED-DEMO_Gateway already exists, found existing ID."
+          make_gw_cred
+        fi
     else
         #check if we're at the limit or not. if not retry.
         if [[ "$create_gw_ct" -lt "$api_call_retry_limit" ]]; then
@@ -606,10 +620,11 @@ pcv_try=0
 
 function verify_pcv() {
     # Checks for Password Credential Validator ID to verify if PCV is created.
-    if [[ $PCV_ID =~ ^[A-Za-z0-9]{1,33}$ ]] && [[ $PCV_ID != null ]]; then
+    if [[ $PCV_ID == "DemoID" ]]; then
         echo "Created LDAP PCV..."
-    elif ([[ -z ${PCV_ID+x} ]] || [[ "$PCV_ID" == "null" ]]) && [[ "$pcv_try" -lt "$api_call_retry_limit" ]]; then
-        check_pcv
+    elif [[ -z ${PCV_ID+x} ]] || [[ "$PCV_ID" == "null" ]] || [[ $PCV_SET == *"already defined"* ]]; then
+      if [[ "$pcv_try" -lt "$api_call_retry_limit" ]]; then
+          check_pcv
         if [[ "$CHECK_PCV_NAME" == "DemoPCV" ]]; then
             echo "LDAP PCV with $CHECK_PCV_NAME name already exists..."
         else
@@ -618,6 +633,7 @@ function verify_pcv() {
             pcv_try=$((pcv_try+1))
             create_pcv
         fi
+      fi
     else
         echo "LDAP PCV not created and exceeded try limit!"
         exit 1
@@ -633,7 +649,7 @@ function check_pcv() {
 ####################################### Create LDAP Password Credential Validator #######################################
 
 function create_pcv() {
-    PCV_ID=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators" \
+    PCV_SET=$(curl -s -k --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/passwordCredentialValidators" \
             --header 'X-XSRF-Header: PASS' \
             --header 'X-BypassExternalValidation: true' \
             --header "Authorization: Basic $PF_CRED" \
@@ -661,7 +677,9 @@ function create_pcv() {
                 }
                 ]
             }
-            }' | jq -rc '.id')
+            }')
+            
+    PCV_ID=$(echo $PCV_SET | jq -rc '.id')
     verify_pcv
 }
 create_pcv
@@ -769,7 +787,7 @@ function check_htmlform() {
 
 function create_adapter() {
 
-    CREATE_ADAPTER=$(curl -s --write-out "%{http_code}\n" --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
+    CREATE_ADAPTER=$(curl -s -k --write-out "%{http_code}\n" --location --request POST "$PINGFED_BASE_URL/pf-admin-api/v1/idp/adapters" \
                 --header 'X-XSRF-Header: PASS' \
                 --header 'X-BypassExternalValidation: true' \
                 --header "Authorization: Basic $PF_CRED" \
@@ -975,7 +993,7 @@ function set_authnpolicy() {
     if [[ "$VERIFY_POLICY_NAME" == "CIDR Demo Policy" ]]; then
     echo "Authenticaion Policy with $VERIFY_POLICY_NAME name already exists..."
     else
-        SET_POLICY=$(curl -s --write-out "%{http_code}\n" --location --request PUT "$PINGFED_BASE_URL/pf-admin-api/v1/authenticationPolicies/default" \
+        SET_POLICY=$(curl -s -k --write-out "%{http_code}\n" --location --request PUT "$PINGFED_BASE_URL/pf-admin-api/v1/authenticationPolicies/default" \
         --header 'X-XSRF-Header: PASS' \
         --header 'X-BypassExternalValidation: true' \
         --header "Authorization: Basic $PF_CRED" \
