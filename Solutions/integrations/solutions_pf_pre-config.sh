@@ -213,40 +213,40 @@ function pingfederate() {
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
         if [ "$CHECK_WEB_OIDC_APP" != "true" ]; then
             echo "PingFederate Admin SSO does not exist, adding now..."
-            WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications" \
-            --header 'Content-Type: application/json' \
-            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-            --data-raw '{
-                "enabled": true,
-                "name": "PingFederate Admin SSO",
-                "#description": " ",
-                "type": "WEB_APP",
-                "accessControl": {
-                "role": {
-                "type": "ADMIN_USERS_ONLY"
-                },
-                "group": {
-                "type": "ANY_GROUP",
-                "groups": [
-                    {
-                    "id": "'"$PF_ADMIN_GROUP_ID"'"
-                    }
-                ]
+        WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications" \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        --data-raw '{
+            "enabled": true,
+            "name": "PingFederate Admin SSO",
+            "#description": " ",
+            "type": "WEB_APP",
+            "accessControl": {
+            "role": {
+            "type": "ADMIN_USERS_ONLY"
+            },
+            "group": {
+            "type": "ANY_GROUP",
+            "groups": [
+                {
+                "id": "'"$PF_ADMIN_GROUP_ID"'"
                 }
-                },
-                "protocol": "OPENID_CONNECT",
-                "grantTypes": [
-                    "AUTHORIZATION_CODE"
-                ],
-                "redirectUris": [
-                    "'"https://$PINGFED_BASE_URL:443/pingfederate/app?service=finishsso"'"
-                ],
-                "responseTypes": [
-                    "CODE"
-                ],
-                "tokenEndpointAuthMethod": "CLIENT_SECRET_BASIC",
-                "pkceEnforcement": "OPTIONAL"
-            }')
+            ]
+            }
+            },
+            "protocol": "OPENID_CONNECT",
+            "grantTypes": [
+                "AUTHORIZATION_CODE"
+            ],
+            "redirectUris": [
+                "'"https://$PINGFED_BASE_URL:443/pingfederate/app?service=finishsso"'"
+            ],
+            "responseTypes": [
+                "CODE"
+            ],
+            "tokenEndpointAuthMethod": "CLIENT_SECRET_BASIC",
+            "pkceEnforcement": "OPTIONAL"
+        }')
 
             # checks app created, as well as verify expected app name to ensure creation
             WEB_OIDC_APP_RESULT=$(echo $WEB_OIDC_APP | sed 's@.*}@@')
@@ -619,8 +619,7 @@ function pingfederate() {
         echo "PF_OIDC_AUTHORIZATION_ENDPOINT=$APP_AUTH_EP" >> $OIDC_FILE
         echo "PF_OIDC_TOKEN_ENDPOINT=$APP_TOKEN_EP" >> $OIDC_FILE
         echo "PF_OIDC_USER_INFO_ENDPOINT=$APP_USERINFO_EP" >> $OIDC_FILE
-        echo "PF_OIDC_END_SESSION_ENDPOINT=" >> $OIDC_FILE
-        echo "PF_OIDC_USER_SESSION_ENDPOINT=$APP_SO_EP" >> $OIDC_FILE
+        echo "PF_OIDC_END_SESSION_ENDPOINT=$APP_SO_EP" >> $OIDC_FILE
         echo "PF_OIDC_ISSUER=$APP_ISSUER" >> $OIDC_FILE
         echo "PF_OIDC_ACR_VALUES=" >> $OIDC_FILE
         echo "PF_OIDC_SCOPES=$APP_SCOPES" >> $OIDC_FILE
