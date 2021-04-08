@@ -5,7 +5,7 @@ it('Test SMS passwordless login', () => {
     cy.get('#username').type('TEST_USERNAME');
     cy.get('[data-id="submit-button"]').click();
     //this gets the SMS sent for login from the RingCentral API. wait 5 seconds to allow for latency with sending.
-    cy.wait(5000).request({
+    cy.wait(7000).request({
         method: 'GET',
         url: 'https://platform.devtest.ringcentral.com/restapi/v1.0/account/~/extension/~/message-store?page=1&perPage=100',
         headers: {
