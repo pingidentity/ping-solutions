@@ -1,4 +1,3 @@
-
 it('Test SMS passwordless login', () => {
     //opening the SMS sign in page, if app name changes we'll need to update that
     cy.visit('https://auth.pingone.com/ENV_ID/saml20/idp/startsso?spEntityId=demo_app_2')
@@ -34,5 +33,5 @@ it('Test SMS passwordless login', () => {
 
      })
      //make sure we made it to httpbin. Not looking for anything special, but URL should include /anything
-     cy.url().should('include', 'anything');
+     cy.url().should('include', 'saml');
 })
