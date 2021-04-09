@@ -6,6 +6,7 @@
 # API_LOCATION
 # ENV_ID
 # WORKER_APP_ACCESS_TOKEN
+
 function ciam() {
     #define script for job.
     echo "------ Beginning Risk Policy Set for CIAM ------"
@@ -834,7 +835,7 @@ function ciam() {
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         --data-raw '{
             "name": "Demo App - Self-Service Registration",
-            "description": "This is a sample app used to demonstrate a Self-Service Registration policy with an Idp-Initiated SAML connection to a public SP API-Based application. You can use the PingIdentity SAML Decoder tool to copy and paste the SAMLResponse from the httpbin value. https://developer.pingidentity.com/en/tools/saml-decoder.html",
+            "description": "This is a sample app used to demonstrate a Self-Service Registration policy using an Idp-Initiated SAML connection to a Ping Identity demo Service Provider application.",
             "enabled": true,
             "type": "WEB_APP",
             "protocol": "SAML",
@@ -842,7 +843,7 @@ function ciam() {
             "responseSigned": false,
             "sloBinding": "HTTP_POST",
             "acsUrls": [
-            "https://httpbin.org/anything"
+            "https://decoder.pingidentity.cloud/saml"
             ],
             "assertionDuration": 60,
             "assertionSigned": true,
@@ -896,7 +897,7 @@ function ciam() {
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         --data-raw '{
             "name": "Demo App - Passwordless Login SMS Only",
-            "description": "This is a sample app used to demonstrate a Passwordless Login SMS Only policy with an Idp-Initiated SAML connection to a public SP API-Based application. You can use the PingIdentity SAML Decoder tool to copy and paste the SAMLResponse from the httpbin value. https://developer.pingidentity.com/en/tools/saml-decoder.html",
+            "description": "This is a sample app used to demonstrate a Passwordless Login SMS Only policy using an Idp-Initiated SAML connection to a Ping Identity demo Service Provider application.",
             "enabled": true,
             "type": "WEB_APP",
             "protocol": "SAML",
@@ -904,7 +905,7 @@ function ciam() {
             "responseSigned": false,
             "sloBinding": "HTTP_POST",
             "acsUrls": [
-            "https://httpbin.org/anything"
+            "https://decoder.pingidentity.cloud/saml"
             ],
             "assertionDuration": 60,
             "assertionSigned": true,
@@ -957,7 +958,7 @@ function ciam() {
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         --data-raw '{
             "name": "Demo App - Passwordless Login Any Method",
-            "description": "This is a sample app used to demonstrate a Passwordless Login Any Method with an Idp-Initiated SAML connection to a public SP API-Based application. You can use the PingIdentity SAML Decoder tool to copy and paste the SAMLResponse from the httpbin value. https://developer.pingidentity.com/en/tools/saml-decoder.html",
+            "description": "This is a sample app used to demonstrate a Passwordless Login Any Method policy using an Idp-Initiated SAML connection to a Ping Identity demo Service Provider application.",
             "enabled": true,
             "type": "WEB_APP",
             "protocol": "SAML",
@@ -965,7 +966,7 @@ function ciam() {
             "responseSigned": false,
             "sloBinding": "HTTP_POST",
             "acsUrls": [
-            "https://httpbin.org/anything"
+            "https://decoder.pingidentity.cloud/saml"
             ],
             "assertionDuration": 60,
             "assertionSigned": true,
