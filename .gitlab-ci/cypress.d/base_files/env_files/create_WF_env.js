@@ -48,7 +48,8 @@ describe('Creating new P14C environment', () => {
           cy.get('[data-id="guide-close-button"]').click();
       }
       cy.getIframeBody().find('[data-id="add.env"]').click();
-      cy.getIframeBody().find('[data-id="custom"]').click();
+      //don't need to pick custom, it's the default now.
+      //cy.getIframeBody().find('[data-id="custom"]').click();
       cy.getIframeBody().find('[data-id="PING_ONE_BASE"]').trigger('mouseover');
       cy.getIframeBody().find('[data-id="select.btn"]').click();
       cy.getIframeBody().find('[data-id="PING_ID"]').trigger('mouseover');
@@ -62,9 +63,6 @@ describe('Creating new P14C environment', () => {
       cy.getIframeBody().find('#name').type("ENV_NM");
       cy.getIframeBody().find('[data-id="sample-data-checkbox"]').click();
       cy.getIframeBody().find('#description').type(". Demo environment generated using Cypress.io.");
-      cy.getIframeBody().find('#license').select('None');
-      //we need to make sure the correct license is selected. Will need work to work with a P1 trial license.
-      cy.getIframeBody().find('select[id=license] > option').contains('LIC_TYPE').then(element => cy.getIframeBody().find('#license').select(element.val()))
       cy.getIframeBody().find('[data-id="finish.btn"]').click();
       //get on out of here!
       cy.get('[data-id="account"]').click();
