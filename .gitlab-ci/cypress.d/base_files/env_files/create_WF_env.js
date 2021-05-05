@@ -50,14 +50,15 @@ describe('Creating new P14C environment', () => {
       cy.getIframeBody().find('[data-id="add.env"]').click();
       //don't need to pick custom, it's the default now.
       //cy.getIframeBody().find('[data-id="custom"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_BASE"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
-      cy.getIframeBody().find('[data-id="PING_ID"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_RISK"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
-      cy.getIframeBody().find('[data-id="PING_ONE_VERIFY"]').trigger('mouseover');
-      cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ONE_BASE"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ID"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ONE_RISK"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
+      //cy.getIframeBody().find('[data-id="PING_ONE_VERIFY"]').trigger('mouseover');
+      //cy.getIframeBody().find('[data-id="select.btn"]').click();
+      cy.getIframeBody().find('[data-id="workforce"]').click();
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       cy.getIframeBody().find('[data-id="next.btn"]').click();
       cy.getIframeBody().find('#name').type("ENV_NM");
