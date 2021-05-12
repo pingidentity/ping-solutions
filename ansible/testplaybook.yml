@@ -1,9 +1,0 @@
-- name: Solutions Ansible Playbook
-  hosts: localhost
-  connection: local
-  gather_facts: false
-  
-  tasks:
-  - include: ./PF/POST/pf_gw_create.yml
-
-  - include: ./PF/POST/pf_risk_adapter.yml
