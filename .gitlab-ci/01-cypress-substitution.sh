@@ -5,6 +5,11 @@ set -eo pipefail
 
 echo "Executing 02-cypress-substitution.sh"
 
+#gimme jq
+JQ=/usr/bin/jq
+curl -sL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 > $JQ && chmod +x $JQ
+ls -la $JQ
+
 #set the dir location
 script_dir="$(cd "$(dirname "$0")"; pwd)"
 

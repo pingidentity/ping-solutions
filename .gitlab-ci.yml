@@ -101,6 +101,12 @@ configure-Cypress-tests:
   dependencies:
     - create-WF-solution
     - create-CIAM-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/integration/"
+      - "./cypress.json"
 
 configure-CIAM-PF-solution:
   stage: 02-PF-to-the-moon
@@ -123,6 +129,7 @@ CIAM-test-configured-state:
     - npx cypress run --spec './cypress/integration/CIAM/set.js' --browser chrome --headless
   dependencies:
     - create-CIAM-solution
+    - configure-Cypress-tests
   artifacts:
     expire_in: 4 hours
     when: always
@@ -136,6 +143,7 @@ WF-test-configured-state:
     - npx cypress run --spec './cypress/integration/WF/set.js' --browser chrome --headless
   dependencies:
     - create-WF-solution
+    - configure-Cypress-tests
   artifacts:
     expire_in: 4 hours
     when: always
