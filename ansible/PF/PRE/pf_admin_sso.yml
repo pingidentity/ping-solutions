@@ -98,24 +98,22 @@
       }
     body_format: json
     status_code: 201
+  register: admin_group_create
   when: '"PingFederate Administrators" not in admin_group_list'
 
-- name: Get PF Administrators Group Again
-  uri:
-    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20'
-    method: GET
-    headers:
-      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-    status_code: 200
-  register: admin_group_again
-  retries: 2
-
-- name: Get PF Administrators Group Exists
+- name: Get PF Administrators Group (Exists)
   set_fact:
     pf_admin_group_id: "{{ admin_group.json._embedded.groups |
                     selectattr('name', 'match', 'PingFederate Administrators') |
                     map(attribute='id') |
                     list | first }}"
+  when: '"PingFederate Administrators" in admin_group_list'
+
+- name: Get PF Administrators Group (Not Exists)
+  set_fact:
+    pf_admin_group_id: "{{ admin_group_create.json._embedded.id
+                        list | first }}"
+  when: '"PingFederate Administrators" not in admin_group_list'                     
 
 - name: Get PF Administrators Application
   uri:
