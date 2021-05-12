@@ -93,7 +93,14 @@ swap-CIAM-file:
   artifacts:
     expire_in: 4 hours
     reports:
-      dotenv: ciam_docker_vars      
+      dotenv: ciam_docker_vars
+
+configure-Cypress-tests:
+  stage: 01-P1-to-the-moon
+  script: ./.gitlab-ci/01-cypress-substitution.sh  
+  dependencies:
+    - create-WF-solution
+    - create-CIAM-solution
 
 configure-CIAM-PF-solution:
   stage: 02-PF-to-the-moon

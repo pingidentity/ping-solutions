@@ -48,7 +48,7 @@ echo "Performing PingOne environment deletion..."
 
 #get a worker app token to run
 export WORKER_APP_ACCESS_TOKEN=$(curl -s -u $ADMIN_CLIENT_ID:$ADMIN_CLIENT_SECRET \
---location --request POST "https://auth.pingone.com/$ADMIN_DELETE_ENV_ID/as/token" \
+--location --request POST "$AUTH_SERVER_BASE_URL/$ADMIN_ENV_ID/as/token" \
 --header "Content-Type: application/x-www-form-urlencoded" \
 --data-raw 'grant_type=client_credentials' \
 | jq -r '.access_token')

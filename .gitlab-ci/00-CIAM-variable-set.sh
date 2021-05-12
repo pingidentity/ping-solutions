@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -eo pipefail
+
+echo "Starting 00-CIAM-variable-set.sh"
+
 #set the dir location
 script_dir="$(cd "$(dirname "$0")"; pwd)"
 #set the cypress directory
@@ -10,8 +14,8 @@ export CLIENT_SECRET=$(cat "$cypress_dir"/CIAM_client_secret.txt)
 export ENV_ID=$(cat "$cypress_dir"/CIAM_envid.txt)
 
 #get a worker app token to run our tests (WF)
-export WORKER_APP_ACCESS_TOKEN=$(curl -u $CLIENT_ID:$CLIENT_SECRET \
---location --request POST "https://auth.pingone.com/$ENV_ID/as/token" \
+export WORKER_APP_ACCESS_TOKEN=$(curl -u $API_CLIENT_ID:$API_CLIENT_SECRET \
+--location --request POST "$AUTH_SERVER_BASE_URL/as/token.oauth2" \
 --header "Content-Type: application/x-www-form-urlencoded" \
 --data-raw 'grant_type=client_credentials' \
 | jq -r '.access_token')
@@ -58,3 +62,5 @@ echo "PF_USERNAME=$PF_USERNAME" >> ./ciam_docker_vars
 echo "PF_PASSWORD=$PF_PASSWORD" >> ./ciam_docker_vars
 echo "AUTH_SERVER_BASE_URL=$AUTH_SERVER_BASE_URL" >> ./ciam_docker_vars
 echo "PLAYBOOK=p1_pf_playbook.yml" >> ./ciam_docker_vars
+
+echo "Finished 00-CIAM-variable-set.sh"

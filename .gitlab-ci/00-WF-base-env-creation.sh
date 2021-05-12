@@ -4,7 +4,7 @@
 
 set -eo pipefail
 
-echo "Starting 00-base-configuration-work.sh"
+echo "Starting 00-WF-base-env-creation.sh"
 
 #gimme jq
 JQ=/usr/bin/jq
@@ -83,4 +83,4 @@ if [[ $CONFIGURE_WF = true ]]; then
   fi
 fi
 
-echo "Finished 00-base-configuration-work.sh"
+echo "Finished 00-WF-base-env-creation.sh"

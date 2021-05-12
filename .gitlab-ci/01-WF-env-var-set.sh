@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 #echo Variables to verify
 echo "API_LOCATION=$API_LOCATION"
 echo "ENV_ID=$ENV_ID"
