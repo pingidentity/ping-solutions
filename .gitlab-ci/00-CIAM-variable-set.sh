@@ -13,14 +13,13 @@ export CLIENT_ID=$(cat "$cypress_dir"/CIAM_client_id.txt)
 export CLIENT_SECRET=$(cat "$cypress_dir"/CIAM_client_secret.txt)
 export ENV_ID=$(cat "$cypress_dir"/CIAM_envid.txt)
 
-#get a worker app token to run our tests (WF)
-export WORKER_APP_ACCESS_TOKEN=$(curl -u $API_CLIENT_ID:$API_CLIENT_SECRET \
---location --request POST "$AUTH_SERVER_BASE_URL/as/token.oauth2" \
+#finessse the BoM
+export WORKER_APP_ACCESS_TOKEN=$(curl -s -u $ADMIN_CLIENT_ID:$ADMIN_CLIENT_SECRET \
+--location --request POST "$AUTH_SERVER_BASE_URL/$ADMIN_ENV_ID/as/token" \
 --header "Content-Type: application/x-www-form-urlencoded" \
 --data-raw 'grant_type=client_credentials' \
 | jq -r '.access_token')
 
-#finessse the BoM
 PFeddy_add=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/billOfMaterials" \
 --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
 --header 'Content-Type: application/json' \
@@ -43,6 +42,13 @@ PFeddy_add=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/b
     }
   ]
 }')
+
+#get a worker app token to run our tests (WF)
+export WORKER_APP_ACCESS_TOKEN=$(curl -u $API_CLIENT_ID:$API_CLIENT_SECRET \
+--location --request POST "$AUTH_SERVER_BASE_URL/as/token.oauth2" \
+--header "Content-Type: application/x-www-form-urlencoded" \
+--data-raw 'grant_type=client_credentials' \
+| jq -r '.access_token')
 
 #echo Variables to verify
 echo "API_LOCATION=$API_LOCATION"
