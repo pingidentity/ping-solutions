@@ -1,0 +1,103 @@
+- name: WF Risk Policy Check
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/riskPolicySets'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: risk_policy_result
+  retries: 2
+
+- name: WF Risk Check Policy Name And Get The ID
+  set_fact: 
+    risk_id: "{{ risk_policy_result.json._embedded.riskPolicySets[0].id }}"
+    risk_name: "{{ risk_policy_result.json._embedded.riskPolicySets[0].name }}"
+
+- name: WF Risk Policy Set
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/riskPolicySets/{{ risk_id }}'
+    method: PUT
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name" : "Default Workforce High Risk Policy",
+        "default" : true,
+        "canUseIntelligenceDataConsent": true,
+        "description" : "Workforce Risk Policy",
+        "defaultResult" : {
+          "level" : "LOW",
+          "type" : "VALUE"
+        },
+        "riskPolicies" : [ {
+          "name" : "GEOVELOCITY_ANOMALY",
+          "priority" : 1,
+          "result" : {
+            "level" : "HIGH",
+            "type" : "VALUE"
+          },
+          "condition" : {
+            "equals" : true,
+            "value" : "${details.impossibleTravel}"
+          }
+        },
+        {
+        "name" : "MEDIUM_WEIGHTED_POLICY",
+        "priority" : 2,
+        "result" : {
+          "level" : "MEDIUM",
+          "type" : "VALUE"
+        },
+        "condition" : {
+          "between" : {
+            "minScore" : 40,
+            "maxScore" : 70
+          },
+          "aggregatedWeights" : [ {
+            "value" : "${details.aggregatedWeights.anonymousNetwork}",
+            "weight" : 4
+            }, {
+            "value" : "${details.aggregatedWeights.geoVelocity}",
+            "weight" : 2
+            }, {
+            "value" : "${details.aggregatedWeights.ipRisk}",
+            "weight" : 5
+            }, {
+            "value" : "${details.aggregatedWeights.userRiskBehavior}",
+            "weight" : 10
+            } ]
+          }
+        },
+        {
+        "name" : "HIGH_WEIGHTED_POLICY",
+        "priority" : 3,
+        "result" : {
+            "level" : "HIGH",
+            "type" : "VALUE"
+        },
+        "condition" : {
+            "between" : {
+              "minScore" : 70,
+              "maxScore" : 100
+              },
+              "aggregatedWeights" : [ {
+                "value" : "${details.aggregatedWeights.anonymousNetwork}",
+                "weight" : 4
+                }, {
+                "value" : "${details.aggregatedWeights.geoVelocity}",
+                "weight" : 2
+                }, {
+                "value" : "${details.aggregatedWeights.ipRisk}",
+                "weight" : 5
+                }, {
+                "value" : "${details.aggregatedWeights.userRiskBehavior}",
+                "weight" : 10
+              } ]
+            }
+        } ]
+      }
+    body_format: json
+    status_code: 200
+  retries: 2
+  when: 'risk_name != "Default Workforce High Risk Policy"'

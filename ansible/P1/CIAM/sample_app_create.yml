@@ -1,0 +1,286 @@
+- name: CIAM Create App Get Signing Cert
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/keys'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: key_info
+  retries: 2
+
+- name: CIAM Create App Get Signing Key
+  set_fact:
+    #need to do _embedded['keys']" because keys is a reserved word in ansible.
+    signing_key: "{{ key_info.json._embedded['keys'] |
+                  selectattr('usageType', 'match', 'SIGNING') |
+                  map(attribute='id') |
+                  list | first }}"
+
+- name: CIAM Create App Get Applications
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: app_info
+  retries: 2    
+
+- name: CIAM Create App Filter Application List
+  set_fact:
+    app_list: "{{ app_info.json._embedded.applications |
+              selectattr('spEntityId', 'defined') |
+              map(attribute='spEntityId') }}"
+
+
+- name: CIAM Create App Create Self Service Application
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "name": "Demo App - Self-Service Registration",
+          "description": "This is a sample app used to demonstrate a Self-Service Registration policy using an Idp-Initiated SAML connection to a Ping Identity demo Service Provider application.",
+          "enabled": true,
+          "type": "WEB_APP",
+          "protocol": "SAML",
+          "spEntityId": "demo_app_1",
+          "responseSigned": false,
+          "sloBinding": "HTTP_POST",
+          "acsUrls": [
+          "https://decoder.pingidentity.cloud/saml"
+          ],
+          "assertionDuration": 60,
+          "assertionSigned": true,
+          "idpSigning": {
+              "key": {
+                  "id": "{{ signing_key }}"
+              },
+              "algorithm": "SHA256withRSA"
+          }
+      }
+    body_format: json
+    status_code: 201
+  when: '"demo_app_1" not in app_list'
+
+- name: CIAM Create App Create SMS Application
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "name": "Demo App - Passwordless Login SMS Only",
+          "description": "This is a sample app used to demonstrate a Passwordless Login SMS Only policy using an Idp-Initiated SAML connection to a Ping Identity demo Service Provider application.",
+          "enabled": true,
+          "type": "WEB_APP",
+          "protocol": "SAML",
+          "spEntityId": "demo_app_2",
+          "responseSigned": false,
+          "sloBinding": "HTTP_POST",
+          "acsUrls": [
+          "https://decoder.pingidentity.cloud/saml"
+          ],
+          "assertionDuration": 60,
+          "assertionSigned": true,
+          "idpSigning": {
+              "key": {
+                  "id": "{{ signing_key }}"
+              },
+              "algorithm": "SHA256withRSA"
+          }
+      }
+    body_format: json
+    status_code: 201
+  when: '"demo_app_2" not in app_list'
+
+- name: CIAM Create App Create Passwordless Application
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "name": "Demo App - Passwordless Login Any Method",
+          "description": "This is a sample app used to demonstrate a Passwordless Login Any Method policy using an Idp-Initiated SAML connection to a Ping Identity demo Service Provider application.",
+          "enabled": true,
+          "type": "WEB_APP",
+          "protocol": "SAML",
+          "spEntityId": "demo_app_3",
+          "responseSigned": false,
+          "sloBinding": "HTTP_POST",
+          "acsUrls": [
+          "https://decoder.pingidentity.cloud/saml"
+          ],
+          "assertionDuration": 60,
+          "assertionSigned": true,
+          "idpSigning": {
+              "key": {
+                  "id": "{{ signing_key }}"
+              },
+              "algorithm": "SHA256withRSA"
+          }
+      }
+    body_format: json
+    status_code: 201
+  when: '"demo_app_3" not in app_list'
+
+- name: CIAM Create App Second Get List of Authorization Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+    validate_certs: true
+  register: policy_action_check
+  retries: 2
+
+- name: CIAM Create App Filter Authorization Policy IDs
+  set_fact:
+    self_reg_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_Self-Registration_Login_Policy') |
+                    map(attribute='id') | list | first }}"         
+    passwordless_sms_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_Passwordless_SMS_Login_Policy') |
+                    map(attribute='id') | list | first }}"
+    passwordless_any_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_Passwordless_Any_Method_Login_Policy') |
+                    map(attribute='id') | list | first }}"
+
+- name: CIAM Create App Get Applications Again
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: app_info_recheck
+  retries: 2    
+
+- name: CIAM Create App Filter Application List
+  set_fact:
+    self_serv_app_id: "{{ app_info_recheck.json._embedded.applications |
+                      selectattr('spEntityId', 'defined') |
+                      selectattr('spEntityId', 'match', 'demo_app_1') |
+                      map(attribute='id') | list | first }}"
+    passwordless_sms_app_id: "{{ app_info_recheck.json._embedded.applications |
+                      selectattr('spEntityId', 'defined') |
+                      selectattr('name', 'match', 'Demo App - Passwordless Login SMS Only') |
+                      map(attribute='id') | list | first }}"
+    passwordless_any_app_id: "{{ app_info_recheck.json._embedded.applications |
+                      selectattr('spEntityId', 'defined') |
+                      selectattr('name', 'match', 'Demo App - Passwordless Login Any Method') |
+                      map(attribute='id') | list | first }}"
+
+
+- name: CIAM Create App Get Self Service Application Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ self_serv_app_id }}/signOnPolicyAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: ssa_info
+  retries: 2    
+
+- name: CIAM Create App Check if Self Service App Policy Exists
+  set_fact:
+    check_ssa: "{{ ssa_info.json._embedded.signOnPolicyAssignments |
+                map(attribute='priority') | list }}"
+
+
+- name: CIAM Create App Create Self Service App Policy
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ self_serv_app_id }}/signOnPolicyAssignments'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "signOnPolicy": {
+          "id": "{{ self_reg_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  when: '1 not in check_ssa'
+
+- name: CIAM Create App Get Passwordless SMS Application Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ passwordless_sms_app_id }}/signOnPolicyAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: sms_info
+  retries: 2    
+
+- name: CIAM Create App Check if Passwordless SMS Policy Exists
+  set_fact:
+    check_sms: "{{ sms_info.json._embedded.signOnPolicyAssignments |
+                map(attribute='priority') | list }}"
+
+
+- name: CIAM Create App Create Passwordless SMS App Policy
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ passwordless_sms_app_id }}/signOnPolicyAssignments'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "signOnPolicy": {
+          "id": "{{ passwordless_sms_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  when: '1 not in check_sms'
+
+
+
+- name: CIAM Create App Get Passwordless Any Method Application Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ passwordless_any_app_id }}/signOnPolicyAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: any_info
+  retries: 2    
+
+- name: CIAM Create App Check if Passwordless Any Method Policy Exists
+  set_fact:
+    check_any: "{{ any_info.json._embedded.signOnPolicyAssignments |
+                map(attribute='priority') | list }}"
+
+
+- name: CIAM Create App Create Passwordless Any Method App Policy
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ passwordless_any_app_id }}/signOnPolicyAssignments'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "signOnPolicy": {
+          "id": "{{ passwordless_any_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  when: '1 not in check_any'

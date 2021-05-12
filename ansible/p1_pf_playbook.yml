@@ -1,0 +1,57 @@
+- name: Solutions Ansible Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  tasks:
+  - name: Get BoM Components
+    uri:
+      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/billOfMaterials'
+      method: GET
+      headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      status_code: 200
+    register: bom_get
+    retries: 2
+
+  - name: Check BoM Components
+    set_fact:
+      bom_values: "{{ bom_get.json.products |
+                  map(attribute='type') |
+                  list }}"
+
+# CIAM Block
+  - include: ./P1/CIAM/risk_policy_set.yml
+    when: >
+      "PING_ONE_MFA" in bom_values and
+      "PING_ONE_RISK" in bom_values
+
+  - include: ./P1/CIAM/auth_policy_set.yml
+    when: '"PING_ONE_MFA" in bom_values'
+
+  - include: ./P1/CIAM/theme_set.yml
+    when: '"PING_ONE_MFA" in bom_values'
+
+  - include: ./P1/CIAM/sample_app_create.yml
+    when: '"PING_ONE_MFA" in bom_values'
+
+# Workforce Block
+  - include: ./P1/WF/risk_policy_set.yml
+    when: >
+      "PING_ID" in bom_values and
+      "PING_ONE_RISK" in bom_values
+
+  - include: ./P1/WF/pass_policy_set.yml
+    when: '"PING_ID" in bom_values'
+
+  - include: ./P1/WF/user_pop_set.yml
+    when: '"PING_ID" in bom_values'
+
+  - include: ./P1/WF/user_group_mod.yml
+    when: '"PING_ID" in bom_values'
+
+# Ping Federate Block
+#need to also look at deployment to see if PF deployed
+  - include: ./PF/PRE/pf_admin_sso.yml
+    when: '"PING_FEDERATE" in bom_values'
+  

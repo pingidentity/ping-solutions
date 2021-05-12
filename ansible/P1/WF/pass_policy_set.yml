@@ -1,0 +1,63 @@
+- name: WF Password Policy Check
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/passwordPolicies'
+    method: GET
+    headers:
+      content-type: application/x-www-form-urlencoded
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: pass_policy_result
+  retries: 2
+
+- name: WF Password Policy Check Passphrase Policy Default Status And Get The ID
+  set_fact: 
+    passphrase_id: "{{ pass_policy_result.json._embedded.passwordPolicies |
+                        selectattr('name', 'match', 'Passphrase') |
+                        map(attribute='id') |
+                        list |
+                        first }}"
+    pass_default: "{{ pass_policy_result.json._embedded.passwordPolicies |
+                        selectattr('name', 'match', 'Passphrase') |
+                        map(attribute='default') |
+                        list |
+                        first }}"               
+
+- name: WF Password Policy Policy Set
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/passwordPolicies/{{ passphrase_id }}'
+    method: PUT
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "id" : "{{ passphrase_id }}",
+          "environment" : {
+            "id" : "{{ ENV_ID }}"
+          },
+          "name" : "Passphrase",
+          "description" : "A policy that encourages the use of passphrases",
+          "excludesProfileData" : true,
+          "notSimilarToCurrent" : true,
+          "excludesCommonlyUsed" : true,
+          "maxRepeatedCharacters": 2,
+          "minComplexity" : 7,
+          "maxAgeDays" : 182,
+          "minAgeDays" : 1,
+          "history" : {
+            "count" : 6,
+            "retentionDays" : 365
+          },
+          "length": {
+            "min": 8,
+            "max": 255
+          },
+          "lockout" : {
+            "failureCount" : 5,
+            "durationSeconds" : 900
+          },
+          "default" : true
+      }
+    body_format: json
+    status_code: 200
+  retries: 2

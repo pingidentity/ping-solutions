@@ -1,0 +1,356 @@
+- name: CIAM Auth Policy Get Population
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: pop_list
+  retries: 2
+
+- name: CIAM Auth Policy Get Population ID
+  set_fact: 
+    popID: "{{ pop_list.json._embedded.populations |
+                  selectattr('name', 'match', 'Sample Users') |
+                  map(attribute='id') |
+                  list |
+                  first }}"
+
+- name: CIAM Auth Policy Get List of Authorization Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: policy_check
+  retries: 2
+
+- name: CIAM Auth Policy Filter Authorization Policy Names
+  set_fact:
+    auth_pol_names: "{{ policy_check.json._embedded.signOnPolicies |
+                    map(attribute='name') |
+                    list }}"
+
+- name: CIAM Auth Policy Self Registration Policy Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "Demo_Self-Registration_Login_Policy",
+        "default": "false",
+        "description": "A sign-on policy that allows for single-factor self-registration for Demo purposes"
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '"Demo_Self-Registration_Login_Policy" not in auth_pol_names'
+
+
+- name: CIAM Auth Policy Passwordless SMS Policy Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "Demo_Passwordless_SMS_Login_Policy",
+        "default": "false",
+        "description": "A passwordless sign-on policy that allows SMS authentication for Demo purposes"
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '"Demo_Passwordless_SMS_Login_Policy" not in auth_pol_names'
+
+- name: CIAM Auth Policy Any Method Policy Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "Demo_Passwordless_Any_Method_Login_Policy",
+        "default": "false",
+        "description": "A passwordless sign-on policy that allows for FIDO2 Biometrics, Authenticator app, email, SMS, or security key authentication for Demo purposes"
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '"Demo_Passwordless_Any_Method_Login_Policy" not in auth_pol_names'
+
+- name: CIAM Auth Policy MFA Policy Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "Demo_Multi_Factor_Login_Policy",
+        "default": "false",
+        "description": "A sign-on policy that requires primary username and password along with pre-configured additions for Demo purposes"
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '"Demo_Multi_Factor_Login_Policy" not in auth_pol_names'
+
+- name: CIAM Auth Policy Second Get List of Authorization Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: policy_action_check
+  retries: 2
+
+- name: CIAM Auth Policy Filter Authorization Policy IDs
+  set_fact:
+    self_reg_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_Self-Registration_Login_Policy') |
+                    map(attribute='id') |
+                    list | first }}"         
+    passwordless_sms_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_Passwordless_SMS_Login_Policy') |
+                    map(attribute='id') |
+                    list | first }}"
+    passwordless_any_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_Passwordless_Any_Method_Login_Policy') |
+                    map(attribute='id') |
+                    list | first }}"
+    mfa_pol_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_Multi_Factor_Login_Policy') |
+                    map(attribute='id') |
+                    list | first }}"
+
+- name: CIAM Auth Policy Get Self Registration Actions
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ self_reg_id }}/actions'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: self_reg_actions
+  retries: 2
+
+- name: CIAM Auth Policy Check Self Reg Actions
+  set_fact:
+    self_reg_check: "{{ self_reg_actions.json._embedded.actions |
+    map(attribute='priority') |
+    list }}"
+
+- name: CIAM Auth Policy Self Registration Policy Action Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ self_reg_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+      "priority": 1,
+      "type": "LOGIN",
+      "recovery": {
+        "enabled": true
+      },
+      "registration": {
+        "enabled": true,
+        "population": {
+          "id": "{{ popID }}"
+          }
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '1 not in self_reg_check'
+
+- name: CIAM Auth Policy Get SMS Actions
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ passwordless_sms_id }}/actions'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: sms_reg_actions
+  retries: 2
+
+- name: CIAM Auth Policy Check SMS Actions
+  set_fact:
+    sms_reg_check: "{{ sms_reg_actions.json._embedded.actions |
+    map(attribute='priority') |
+    list }}"
+
+- name: CIAM Auth Policy Passwordless SMS Policy Action Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ passwordless_sms_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "type": "MULTI_FACTOR_AUTHENTICATION",
+        "noDevicesMode": "BLOCK",
+        "sms": {
+            "enabled": true
+        },
+        "boundBiometrics": {
+            "enabled": false
+        },
+        "authenticator": {
+            "enabled": false
+        },
+        "email": {
+            "enabled": false
+        },
+        "securityKey": {
+            "enabled": false
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '1 not in sms_reg_check'
+
+- name: CIAM Auth Policy Get Any Passwordless Actions
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ passwordless_any_id }}/actions'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: pwdless_reg_actions
+  retries: 2
+
+- name: CIAM Auth Policy Check Any Passwordless Actions
+  set_fact:
+    pwdless_reg_check: "{{ pwdless_reg_actions.json._embedded.actions |
+    map(attribute='priority') |
+    list }}"
+
+- name: CIAM Auth Policy Passwordless Any Method Policy Action Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ passwordless_any_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "type": "MULTI_FACTOR_AUTHENTICATION",
+        "priority": 1,
+        "noDevicesMode": "BLOCK",
+        "sms": {
+            "enabled": true
+        },
+        "boundBiometrics": {
+            "enabled": false
+        },
+        "authenticator": {
+            "enabled": false
+        },
+        "email": {
+            "enabled": false
+        },
+        "securityKey": {
+            "enabled": false
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '1 not in pwdless_reg_check'
+
+- name: CIAM Auth Policy Get MFA Actions
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ mfa_pol_id }}/actions'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: mfa_reg_actions
+  retries: 2
+
+- name: CIAM Auth Policy Check MFA Actions
+  set_fact:
+    mfa_reg_check: "{{ mfa_reg_actions.json._embedded.actions |
+    map(attribute='priority') |
+    list }}"
+
+- name: CIAM Auth Policy Passwordless MFA Policy Action Create Step 1
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ mfa_pol_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "type": "LOGIN",
+        "recovery": {
+        "enabled": true
+        },
+        "registration": {
+        "enabled": true,
+        "population": {
+            "id": "{{ popID }}"
+          }
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '1 not in mfa_reg_check'    
+
+- name: CIAM Auth Policy Passwordless MFA Policy Action Create Step 2
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ mfa_pol_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 2,
+        "type": "MULTI_FACTOR_AUTHENTICATION",
+        "condition": {
+          "secondsSince": "${session.lastSignOn.withAuthenticator.mfa.at}",
+          "greater": 300
+        },
+        "priority": 2,
+        "noDevicesMode": "BLOCK",
+        "sms": {
+            "enabled": true
+        },
+        "boundBiometrics": {
+            "enabled": true
+        },
+        "authenticator": {
+            "enabled": true
+        },
+        "email": {
+            "enabled": true
+        },
+        "securityKey": {
+            "enabled": true
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: '2 not in mfa_reg_check'

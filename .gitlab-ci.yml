@@ -1,0 +1,150 @@
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+stages:
+  - 00-ready-to-the-moon
+  - 01-P1-to-the-moon
+  - 02-PF-to-the-moon
+  - 03-test-configured
+  - 04-back-from-the-moon
+
+default:
+  #image: cypress/browsers:$DOCKER_IMAGE_VER
+  image: cypress/included:$CYPRESS_VERSION
+  services:
+    - name: "docker:18.09-dind"
+  tags:
+    - k8s
+
+variables:
+  DOCKER_HOST: "tcp://localhost:2375"
+  DOCKER_API_VERSION: "1.39"
+  KUBERNETES_CPU_REQUEST: "1250m"
+  KUBERNETES_CPU_LIMIT: "2000m"
+  KUBERNETES_MEMORY_REQUEST: "4000Mi"
+  KUBERNETES_MEMORY_LIMIT: "4000Mi"
+  KUBERNETES_POLL_TIMEOUT: 600
+
+create-CIAM-solution:
+  stage: 00-ready-to-the-moon
+  script:
+    #get cypress ready to roll
+    - "./.gitlab-ci/00-CIAM-base-env-creation.sh"
+    - npx cypress run --spec "./cypress/integration/CIAM/02-create_ciam_env.js" --browser chrome --headless
+    - "./.gitlab-ci/00-CIAM-variable-set.sh"
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      #test where txt file going
+      - "./cypress/"
+      - "./cypress/integration/"
+      - "./cypress.json"
+    reports:
+      dotenv: ciam_docker_vars
+
+create-WF-solution:
+  stage: 00-ready-to-the-moon
+  script:
+    #get cypress ready to roll
+    - "./.gitlab-ci/00-WF-base-env-creation.sh"
+    - npx cypress run --spec "./cypress/integration/WF/01-create_wf_env.js" --browser chrome --headless
+    - "./.gitlab-ci/00-WF-variable-set.sh"
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      #test where txt file going
+      - "./cypress/"
+      - "./cypress/integration/"
+      - "./cypress.json"
+    reports:
+      dotenv: wf_docker_vars      
+
+configure-CIAM-solution:
+  stage: 01-P1-to-the-moon
+  image: pdsolutions/ansible:0.1
+  script: /ansible/entrypoint.sh
+  dependencies:
+    - create-CIAM-solution
+
+configure-WF-solution:
+  stage: 01-P1-to-the-moon
+  image: pdsolutions/ansible:0.1
+  script: /ansible/entrypoint.sh
+  dependencies:
+    - create-WF-solution   
+
+swap-WF-file:
+  stage: 01-P1-to-the-moon     
+  script: ./.gitlab-ci/01-WF-env-var-set.sh
+  artifacts:
+    expire_in: 4 hours
+    reports:
+      dotenv: wf_docker_vars
+
+swap-CIAM-file:
+  stage: 01-P1-to-the-moon     
+  script: ./.gitlab-ci/01-CIAM-env-var-set.sh
+  artifacts:
+    expire_in: 4 hours
+    reports:
+      dotenv: ciam_docker_vars      
+
+configure-CIAM-PF-solution:
+  stage: 02-PF-to-the-moon
+  image: pdsolutions/ansible:0.1
+  script: /ansible/entrypoint.sh
+  dependencies:
+    - swap-CIAM-file
+
+configure-WF-PF-solution:
+  stage: 02-PF-to-the-moon
+  image: pdsolutions/ansible:0.1
+  script: /ansible/entrypoint.sh
+  dependencies:
+    - swap-WF-file
+
+CIAM-test-configured-state:
+  stage: 03-test-configured
+  script:
+    #run master set test scripts for CIAM
+    - npx cypress run --spec './cypress/integration/CIAM/set.js' --browser chrome --headless
+  dependencies:
+    - create-CIAM-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
+
+WF-test-configured-state:
+  stage: 03-test-configured
+  script:
+    #run master set test scripts for WF
+    - npx cypress run --spec './cypress/integration/WF/set.js' --browser chrome --headless
+  dependencies:
+    - create-WF-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"
+
+env-cleanup:
+  stage: 04-back-from-the-moon
+  when: always
+  script:
+    - "./.gitlab-ci/04-base-environment-deletion.sh"
+  dependencies:
+    - create-WF-solution
+    - create-CIAM-solution
+  artifacts:
+    expire_in: 4 hours
+    when: always
+    paths:
+      - "./cypress/videos/"

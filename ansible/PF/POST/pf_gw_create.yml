@@ -1,0 +1,107 @@
+- name: PF Gateway Check
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: gateway_get
+  retries: 2
+
+#again json['items'] due to protected value
+- name: PF Gateway List
+  set_fact:
+    gateway_list: "{{ gateway_get.json._embedded.gateways |
+                    map(attribute='name') |
+                    list }}"  
+
+- name: PF Gateway Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways'
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "PING_FED-DEMO_Gateway",
+        "description": "Gateway connection linking PingFederate to PingOne. See https://apidocs.pingidentity.com/pingone/platform/v1/api/#gateway-management.",
+        "type": "PING_FEDERATE",
+        "enabled": true
+      }
+    body_format: json
+    status_code: 201
+  register: gw_create
+  retries: 2
+  when: '"PING_FED-DEMO_Gateway" not in gateway_list'
+
+- name: PF Gateway ID (Existing)
+  set_fact:
+    gateway_id: "{{ gateway_get.json._embedded.gateways |
+                    selectattr('name', 'match', 'PING_FED-DEMO_Gateway') |
+                    map(attribute='id') |
+                    list | first }}"
+  when: '"PING_FED-DEMO_Gateway" in gateway_list'
+
+- name: PF Gateway ID (New)
+  set_fact:
+    gateway_id: "{{ gw_create.json.id }}"
+    gw_cred_ct: "0"
+  when: '"PING_FED-DEMO_Gateway" not in gateway_list'
+
+- name: PF Gateway Credential Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways/{{ gateway_id }}/credentials'
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 201
+  register: gw_cred_response
+  retries: 2
+
+- name: PF Gateway Cred Value
+  set_fact:
+    gateway_cred: "{{ gw_cred_response.json.credential }}"
+
+- name: PF Gateway Connection Check
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/pingOneConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+    status_code: 200
+    validate_certs: no      
+  register: gateway_check
+  retries: 2
+
+- name: PF Gateway Connection List
+  set_fact:
+    gateway_list: "{{ gateway_check.json['items'] |
+                    map(attribute='name') |
+                    list }}"
+
+- name: PF Gateway Create In PF
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/pingOneConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    body: >
+      {
+        "name": "PING_ONE_to_PING_FED_DEMO_Gateway",
+        "active": true,
+        "credential": "{{ gateway_cred }}"
+      }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: pf_gw_create
+  retries: 2
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in gateway_cred'
