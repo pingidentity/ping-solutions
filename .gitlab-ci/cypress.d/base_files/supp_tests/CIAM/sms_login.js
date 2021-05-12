@@ -1,6 +1,6 @@
 it('Test SMS passwordless login', () => {
     //opening the SMS sign in page, if app name changes we'll need to update that
-    cy.visit('https://auth.pingone.com/ENV_ID/saml20/idp/startsso?spEntityId=demo_app_2')
+    cy.visit('https://auth-staging.pingone.com/ENV_ID/saml20/idp/startsso?spEntityId=demo_app_2')
     cy.get('#username').type('TEST_USERNAME');
     cy.get('[data-id="submit-button"]').click();
     //this gets the SMS sent for login from the RingCentral API. wait 5 seconds to allow for latency with sending.

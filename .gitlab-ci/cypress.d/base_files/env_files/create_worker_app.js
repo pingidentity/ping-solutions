@@ -1,6 +1,6 @@
 
     it('Visits ENV_NM PingOne Console and creates worker app', () => {
-        cy.visit('https://console.pingone.com/?env=ENV_ID');
+        cy.visit('https://console-staging.pingone.com/?env=ENV_ID');
         //hide the new user guides, I don't wanna figure out clicking it.
         window.localStorage.setItem('ping-hideCompassGuide-ENV_ID','true')
         window.localStorage.setItem('ping-hideCompassGuide-MyPing-ENV_ID','true')

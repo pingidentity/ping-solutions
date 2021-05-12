@@ -20,7 +20,7 @@ Cypress.Commands.add('getIframeBody', () => {
 
 describe('Delete ENV_NM environment', () => {
     it('Visits PingOne Console to delete ENV_NM', () => {
-      cy.visit('https://console.pingone.com/?env=ENV_ID');
+      cy.visit('https://console-staging.pingone.com/?env=ENV_ID');
       //login
       cy.get('#username').type('TEST_USERNAME');
       cy.get('#password').type('TEST_PASSWORD');

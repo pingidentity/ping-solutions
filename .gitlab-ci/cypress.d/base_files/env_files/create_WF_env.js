@@ -20,7 +20,7 @@ describe('Creating new P14C environment', () => {
       expect(err.message).to.include('error originated from your application code');
       return false
   })
-    cy.visit('https://console.pingone.com/?env=ENV_ID');
+    cy.visit('https://console-staging.pingone.com/?env=ENV_ID');
     //login
     cy.url().then(($url) => {
       if($url.includes('signon')) {

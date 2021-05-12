@@ -1,6 +1,6 @@
     
     it('100-pass_policy_set', () => {
-      cy.visit('https://console.pingone.com/?env=ENV_ID');
+      cy.visit('https://console-staging.pingone.com/?env=ENV_ID');
       //login
       cy.url().then(($url) => {
         if($url.includes('signon')) {
