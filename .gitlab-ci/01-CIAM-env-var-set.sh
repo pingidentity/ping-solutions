@@ -2,6 +2,10 @@
 
 set -eo pipefail
 
+#set the dir location
+script_dir="$(cd "$(dirname "$0")"; pwd)"
+#set the cypress directory
+cypress_dir=$(echo "$script_dir/../cypress")
 export ENV_ID=$(cat "$cypress_dir"/CIAM_envid.txt)
 
 #echo Variables to verify
