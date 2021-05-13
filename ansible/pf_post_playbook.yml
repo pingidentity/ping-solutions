@@ -21,9 +21,6 @@
                   list }}"
 
 # Ping Federate Block
-
-  - include: ./PF/POST/pf_external_idp.yml
-    when: '"PING_FEDERATE" in bom_values'
   
   - include: ./PF/POST/pf_ssp_cidr.yml
     when: '"PING_FEDERATE" in bom_values'
