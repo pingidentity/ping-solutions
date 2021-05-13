@@ -2,7 +2,7 @@
 
 #download our repo into the container
 #wget https://github.com/pingidentity/ping-solutions/archive/refs/heads/ansible.zip -O /ansible/playbooks/ansible.zip
-git clone --depth 1 -bansible https://github.com/pingidentity/ping-solutions.git /ansible/playbooks/
+git clone --depth 1 -b0.1-ansible https://github.com/pingidentity/ping-solutions.git /ansible/playbooks/
 
 #extract zip
 #unzip /ansible/playbooks/ansible.zip -d /ansible/playbooks/
