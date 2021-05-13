@@ -67,14 +67,14 @@ create-WF-solution:
 
 configure-CIAM-solution:
   stage: 01-P1-to-the-moon
-  image: pdsolutions/ansible:0.1
+  image: pdsolutions/ansible:pipeline
   script: /ansible/entrypoint.sh
   dependencies:
     - create-CIAM-solution
 
 configure-WF-solution:
   stage: 01-P1-to-the-moon
-  image: pdsolutions/ansible:0.1
+  image: pdsolutions/ansible:pipeline
   script: /ansible/entrypoint.sh
   dependencies:
     - create-WF-solution   
@@ -110,14 +110,14 @@ configure-Cypress-tests:
 
 configure-CIAM-PF-solution:
   stage: 02-PF-to-the-moon
-  image: pdsolutions/ansible:0.1
+  image: pdsolutions/ansible:pipeline
   script: /ansible/entrypoint.sh
   dependencies:
     - swap-CIAM-file
 
 configure-WF-PF-solution:
   stage: 02-PF-to-the-moon
-  image: pdsolutions/ansible:0.1
+  image: pdsolutions/ansible:pipeline
   script: /ansible/entrypoint.sh
   dependencies:
     - swap-WF-file
