@@ -104,4 +104,4 @@
     validate_certs: no
   register: pf_gw_create
   retries: 2
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in gateway_cred'
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in gateway_list'

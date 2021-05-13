@@ -20,6 +20,11 @@
                   map(attribute='type') |
                   list }}"
 
+# Ping Federate Block
+#need to also look at deployment to see if PF deployed
+  - include: ./PF/PRE/pf_admin_sso.yml
+    when: '"PING_FEDERATE" in bom_values'
+  
 # CIAM Block
   - include: ./P1/CIAM/risk_policy_set.yml
     when: >
