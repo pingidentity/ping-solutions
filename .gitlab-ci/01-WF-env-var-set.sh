@@ -10,7 +10,7 @@ echo "PINGFED_BASE_URL=$WF_PINGFED_BASE_URL"
 echo "PF_USERNAME=$PF_USERNAME"
 echo "PF_PASSWORD=$PF_PASSWORD"
 echo "AUTH_SERVER_BASE_URL=$AUTH_SERVER_BASE_URL"
-echo "PLAYBOOK=pf_post_playbook.yml"
+echo "PLAYBOOK=pf_post_playbook.yml -vvv"
 
 #set variables for future pipeline step.
 echo "API_LOCATION=$API_LOCATION" >> ./wf_docker_vars
@@ -20,4 +20,4 @@ echo "PINGFED_BASE_URL=$WF_PINGFED_BASE_URL" >> ./wf_docker_vars
 echo "PF_USERNAME=$PF_USERNAME" >> ./wf_docker_vars
 echo "PF_PASSWORD=$PF_PASSWORD" >> ./wf_docker_vars
 echo "AUTH_SERVER_BASE_URL=$AUTH_SERVER_BASE_URL" >> ./wf_docker_vars
-echo "PLAYBOOK=pf_post_playbook.yml" >> ./wf_docker_vars
+echo "PLAYBOOK=pf_post_playbook.yml -vvv" >> ./wf_docker_vars
