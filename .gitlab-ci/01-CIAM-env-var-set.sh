@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+export ENV_ID=$(cat "$cypress_dir"/CIAM_envid.txt)
+
 #echo Variables to verify
 echo "API_LOCATION=$API_LOCATION"
 echo "ENV_ID=$ENV_ID"
