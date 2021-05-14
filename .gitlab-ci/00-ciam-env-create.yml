@@ -29,7 +29,7 @@
       url: '{{ API_LOCATION }}/environments/{{ ADMIN_ENV_ID }}'
       method: GET
       headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+        Authorization: "Bearer {{ WORKER_APP_ACCESS_TOKEN }}"
       status_code: 200
     register: env_info
     retries: 2
