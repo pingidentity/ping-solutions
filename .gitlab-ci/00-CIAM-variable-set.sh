@@ -35,7 +35,7 @@ PFeddy_add=$(curl --location --request PUT "$API_LOCATION/environments/$ENV_ID/b
         "type": "PING_ONE_BASE"
     },
     {
-        "type": "PING_ID"
+        "type": "PING_MFA"
     },
     {
         "type": "PING_ONE_RISK"
