@@ -28,5 +28,5 @@
   - include: ./PF/POST/pf_gw_create.yml
     when: '"PING_FEDERATE" in bom_values'
 
-  - include: ./PF/POST/pf_risk_adapter.yml
-    when: '"PING_FEDERATE" in bom_values'
+#  - include: ./PF/POST/pf_risk_adapter.yml
+#    when: '"PING_FEDERATE" in bom_values'
