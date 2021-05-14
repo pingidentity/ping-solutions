@@ -6,7 +6,7 @@
   tasks:
   - name: Get API Token
     uri:
-      url: '{{AUTH_SERVER_BASE_URL}}/{{ ENV_ID }}/as/token'
+      url: '{{AUTH_SERVER_BASE_URL}}/{{ ADMIN_ENV_ID }}/as/token'
       method: POST
       url_username: "{{ ADMIN_CLIENT_ID }}"
       url_password: "{{ ADMIN_CLIENT_SECRET }}"
