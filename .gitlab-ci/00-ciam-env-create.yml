@@ -22,14 +22,14 @@
 
   - name: Set API Token
     set_fact:
-      WORKER_APP_ACCESS_TOKEN: "{{ token_get.json.access_token }}"
+      WORKER_APP_ACCESS_TOKEN: "{{ 'Bearer ' + token_get.json.access_token }}"
 
   - name: Get Env Info
     uri:
       url: '{{ API_LOCATION }}/environments/{{ ADMIN_ENV_ID }}'
       method: GET
       headers:
-        Authorization: "Bearer {{ WORKER_APP_ACCESS_TOKEN }}"
+        Authorization: "{{ WORKER_APP_ACCESS_TOKEN }}"
       status_code: 200
     register: env_info
     retries: 2
@@ -43,7 +43,7 @@
       url: '{{ API_LOCATION }}/organizations/{{ org_id }}/licenses'
       method: GET
       headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+        Authorization: "{{ WORKER_APP_ACCESS_TOKEN }}"
       status_code: 200
     register: lic_info
     retries: 2  
@@ -65,7 +65,7 @@
       method: POST
       headers:
         content-type: application/json
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+        Authorization: "{{ WORKER_APP_ACCESS_TOKEN }}"
       body: >
         {
            "inputs":{
