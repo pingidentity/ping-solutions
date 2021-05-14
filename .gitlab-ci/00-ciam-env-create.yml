@@ -8,8 +8,8 @@
     uri:
       url: '{{AUTH_SERVER_BASE_URL}}/{{ ENV_ID }}/as/token'
       method: POST
-      url_username: "9166ed7b-4092-47bf-8857-f2417babe145"
-      url_password: "P4iSpI5f57-MgaYnx5B5-2-rDboGP2FyMvVLrMU40~fG1C03k82fdQgyOzxFk.qM"
+      url_username: "{{ ADMIN_CLIENT_ID }}"
+      url_password: "{{ ADMIN_CLIENT_SECRET }}"
       force_basic_auth: True
       body:
         "grant_type=client_credentials"
