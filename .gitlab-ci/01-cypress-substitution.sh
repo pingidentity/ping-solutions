@@ -53,7 +53,7 @@ export CLIENT_SECRET=$(cat "$cypress_dir"/WF_client_secret.txt)
 export ENV_ID=$(cat "$cypress_dir"/WF_envid.txt)
 
 #get a worker app token to run our tests (WF)
-export WORKER_APP_ACCESS_TOKEN=$(curl -s -u $ADMIN_CLIENT_ID:$ADMIN_CLIENT_SECRET \
+export WORKER_APP_ACCESS_TOKEN=$(curl -s -u $CLIENT_ID:$CLIENT_SECRET \
 --location --request POST "$AUTH_SERVER_BASE_URL/$ADMIN_ENV_ID/as/token" \
 --header "Content-Type: application/x-www-form-urlencoded" \
 --data-raw 'grant_type=client_credentials' \
@@ -108,7 +108,7 @@ export CLIENT_SECRET=$(cat "$cypress_dir"/CIAM_client_secret.txt)
 export ENV_ID=$(cat "$cypress_dir"/CIAM_envid.txt)
 
 #get a worker app token to run our tests (CIAM)
-export WORKER_APP_ACCESS_TOKEN=$(curl -s -u $ADMIN_CLIENT_ID:$ADMIN_CLIENT_SECRET \
+export WORKER_APP_ACCESS_TOKEN=$(curl -s -u $CLIENT_ID:$CLIENT_SECRET \
 --location --request POST "$AUTH_SERVER_BASE_URL/$ADMIN_ENV_ID/as/token" \
 --header "Content-Type: application/x-www-form-urlencoded" \
 --data-raw 'grant_type=client_credentials' \
