@@ -1,0 +1,119 @@
+- name: Solutions CIAM Create Environment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  tasks:
+  - name: Get API Token
+    uri:
+      url: '{{AUTH_SERVER_BASE_URL}}/{{ ENV_ID }}/as/token'
+      method: POST
+      url_username: "9166ed7b-4092-47bf-8857-f2417babe145"
+      url_password: "P4iSpI5f57-MgaYnx5B5-2-rDboGP2FyMvVLrMU40~fG1C03k82fdQgyOzxFk.qM"
+      force_basic_auth: True
+      body:
+        "grant_type=client_credentials"
+      headers:
+        Content-Type: 'application/x-www-form-urlencoded'
+      status_code: 200
+    register: token_get
+    retries: 2
+    delegate_to: localhost
+
+  - name: Set API Token
+    set_fact:
+      WORKER_APP_ACCESS_TOKEN: "{{ token_get.json.access_token }}"
+
+  - name: Get Env Info
+    uri:
+      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+      method: GET
+      headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      status_code: 200
+    register: env_info
+    retries: 2
+
+  - name: Get Environment Information
+    set_fact: 
+      org_id: "{{ env_info.json.organization.id }}"
+
+  - name: Get License Info
+    uri:
+      url: '{{ API_LOCATION }}/organizations/{{ org_id }}/licenses'
+      method: GET
+      headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      status_code: 200
+    register: lic_info
+    retries: 2  
+
+  - name: Get License Information
+    set_fact:
+      license_type: "{{ lic_info.json._embedded.licenses |
+                    selectattr('name', 'match', 'INTERNAL') |
+                    map(attribute='id') |
+                    list | first }}"
+
+  - name: Random Env Info Set
+    set_fact:
+      timestamp: "{{ lookup('pipe', 'date +%s') }}"
+
+  - name: Create new Environment
+    uri:
+      url: '{{ API_LOCATION }}/bootstraps'
+      method: POST
+      headers:
+        content-type: application/json
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      body: >
+        {
+           "inputs":{
+              "environment":{
+                 "id":"",
+                 "name":"CIAM_PIPELINE_{{ timestamp }}",
+                 "region":"NA",
+                 "type":"SANDBOX",
+                 "license":{
+                    "id":"{{ license_type }}",
+                    "name":"INTERNAL",
+                    "supportedRegions":[
+                       "EU",
+                       "NORTH_AMERICA",
+                       "AP"
+                    ],
+                    "allowProduction":false
+                 },
+                 "changeNotificationMessages":[
+                 
+                 ],
+                 "errors":{
+                    "name":""
+                 },
+                 "organization":{
+                    "id":"{{ org_id }}"
+                 },
+                 "billOfMaterials":{
+                    "products":[
+                       {
+                          "type":"PING_ONE_BASE"
+                       },
+                       {
+                          "type":"PING_ONE_MFA"
+                       },
+                       {
+                          "type":"PING_ONE_RISK"
+                       },
+                       {
+                          "type":"PING_ONE_VERIFY"
+                       }
+                    ]
+                 },
+                 "description":"PingOne for Customers"
+              }
+           },
+           "type":"SAMPLE_DATA_TWO_POPULATIONS"
+        }
+      body_format: json
+      status_code: 201
+    retries: 2
