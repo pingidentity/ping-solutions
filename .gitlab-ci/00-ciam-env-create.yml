@@ -26,7 +26,7 @@
 
   - name: Get Env Info
     uri:
-      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+      url: '{{ API_LOCATION }}/environments/{{ ADMIN_ENV_ID }}'
       method: GET
       headers:
         Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
