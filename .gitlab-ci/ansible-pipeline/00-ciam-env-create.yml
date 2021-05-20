@@ -1,0 +1,288 @@
+- name: CIAM Get API Token
+  uri:
+    url: '{{AUTH_SERVER_BASE_URL}}/{{ ADMIN_ENV_ID }}/as/token'
+    method: POST
+    url_username: "{{ ADMIN_CLIENT_ID }}"
+    url_password: "{{ ADMIN_CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: token_get
+  retries: 2
+
+- name: CIAM Set API Token
+  set_fact:
+    PIPELINE_APP_ACCESS_TOKEN: "{{ token_get.json.access_token }}"
+
+- name: CIAM Get Env Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ADMIN_ENV_ID }}'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}"
+    status_code: 200
+  register: env_info
+  retries: 2
+
+- name: CIAM Get Environment Information
+  set_fact: 
+    org_id: "{{ env_info.json.organization.id }}"
+
+- name: CIAM Get License Info
+  uri:
+    url: '{{ API_LOCATION }}/organizations/{{ org_id }}/licenses'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: lic_info
+  retries: 2  
+
+- name: CIAM Get License Information
+  set_fact:
+    license_type: "{{ lic_info.json._embedded.licenses |
+                  selectattr('name', 'match', 'INTERNAL') |
+                  map(attribute='id') |
+                  list | first }}"
+
+- name: CIAM Random Env Info Set
+  set_fact:
+    timestamp: "{{ lookup('pipe', 'date +%s') }}"
+
+- name: CIAM Set ENV Name
+  set_fact:
+    env_name: "CIAM_PIPELINE_{{ timestamp }}"
+
+
+- name: CIAM Create new Environment
+  uri:
+    url: '{{ API_LOCATION }}/bootstraps'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "inputs":{
+            "environment":{
+                "id":"",
+                "name":"{{ env_name }}",
+                "region":"NA",
+                "type":"SANDBOX",
+                "license":{
+                  "id":"{{ license_type }}",
+                  "name":"INTERNAL",
+                  "supportedRegions":[
+                      "EU",
+                      "NORTH_AMERICA",
+                      "AP"
+                  ],
+                  "allowProduction":false
+                },
+                "changeNotificationMessages":[
+                
+                ],
+                "errors":{
+                  "name":""
+                },
+                "organization":{
+                  "id":"{{ org_id }}"
+                },
+                "billOfMaterials":{
+                  "products":[
+                      {
+                        "type":"PING_ONE_BASE"
+                      },
+                      {
+                        "type":"PING_ONE_MFA"
+                      },
+                      {
+                        "type":"PING_ONE_RISK"
+                      },
+                      {
+                        "type":"PING_ONE_VERIFY"
+                      },
+                      {
+                        "type":"PING_FEDERATE"
+                      }
+                  ]
+                },
+                "description":"Pipeline for CIAM"
+            }
+          },
+          "type":"SAMPLE_DATA_TWO_POPULATIONS"
+      }
+    body_format: json
+    status_code: 201
+  register: env_add
+  retries: 2
+
+- name: CIAM Get Environment IDs
+  uri:
+    url: '{{ API_LOCATION }}/environments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: env_list    
+  retries: 2  
+
+- name: CIAM Save Values From New Environment
+  set_fact:
+      CIAM_ENV_ID: "{{ env_list.json._embedded.environments | 
+                    selectattr('name','match', env_name ) |
+                    map(attribute='id') | list | first }}"
+
+- name: CIAM Get API Client Token
+  uri:
+    url: '{{AUTH_SERVER_BASE_URL}}/as/token.oauth2'
+    method: POST
+    url_username: "{{ API_CLIENT_ID }}"
+    url_password: "{{ API_CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: CIAM Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
+- name: CIAM Write Token to File
+  lineinfile:
+    dest: "/builds/solutions/thunder/.gitlab-ci/gitlab_var.prop"
+    create: yes
+    line: '{{ item }}'
+  with_items:
+    - "CIAM_ENV_ID={{ CIAM_ENV_ID }}"
+    - "CIAM_ENV_NAME={{ env_name }}"
+
+- name: CIAM Check if WORKER_APP_ACCESS_TOKEN is already defined
+  lineinfile:
+    state: absent
+    path: "/builds/solutions/thunder/.gitlab-ci/gitlab_var.prop"
+    regexp: "^WORKER_APP_ACCESS_TOKEN="
+  check_mode: true
+  changed_when: false # This just makes things look prettier in the logs
+  register: worker_check
+
+- name: CIAM Define WORKER_APP_ACCESS_TOKEN if undefined
+  lineinfile:
+    state: present
+    path: "/builds/solutions/thunder/.gitlab-ci/gitlab_var.prop"
+    line: WORKER_APP_ACCESS_TOKEN={{ WORKER_APP_ACCESS_TOKEN }}
+  when: worker_check.found == 0
+
+- name: CIAM Check if PIPELINE_APP_ACCESS_TOKEN is already defined
+  lineinfile:
+    state: absent
+    path: "/builds/solutions/thunder/.gitlab-ci/gitlab_var.prop"
+    regexp: "^PIPELINE_APP_ACCESS_TOKEN="
+  check_mode: true
+  changed_when: false # This just makes things look prettier in the logs
+  register: worker_check
+
+- name: CIAM Define PIPELINE_APP_ACCESS_TOKEN if undefined
+  lineinfile:
+    state: present
+    path: "/builds/solutions/thunder/.gitlab-ci/gitlab_var.prop"
+    line: PIPELINE_APP_ACCESS_TOKEN={{ PIPELINE_APP_ACCESS_TOKEN }}
+  when: worker_check.found == 0
+
+#Cypress block
+#- name: CIAM SMS Get Users
+#  uri:
+#    url: '{{ API_LOCATION }}/environments/{{ CIAM_ENV_ID }}/users'
+#    method: GET
+#    headers:
+#      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+#    status_code: 200
+#  register: user_list    
+#  retries: 2
+#
+#- name: CIAM Filter User List for Antonik
+#  set_fact:
+#    mfa_user_id: "{{ user_list.json._embedded.users[0].id  }}"
+#    mfa_user_name: "{{ user_list.json._embedded.users[0].username  }}"
+#
+#- name: CIAM Set User Password
+#  uri:
+#    url: '{{ API_LOCATION }}/environments/{{ CIAM_ENV_ID }}/users/{{ mfa_user_id }}/password'
+#    method: POST
+#    headers:
+#      Content-Type: application/vnd.pingidentity.password.set+json
+#      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+#    body: >
+#      {
+#        "value": "{{ RUNNER_USER_TEST_PASSWORD }}",
+#        "forceChange": false
+#      }
+#    body_format: json
+#    status_code: 204
+#  register: user_add_pass
+#  retries: 2
+#
+#- name: CIAM Set User MFA
+#  uri:
+#    url: '{{ API_LOCATION }}/environments/{{ CIAM_ENV_ID }}/users/{{ mfa_user_id }}/mfaEnabled'
+#    method: POST
+#    headers:
+#      Content-Type: application/json
+#      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+#    body: >
+#      {
+#        "type": "SMS",
+#        "phone": "{{ RINGCENTRAL_USERNAME }}"
+#      }
+#    body_format: json
+#    status_code: 204
+#  register: user_add_mfa
+#  retries: 2  
+#
+#- name: CIAM GET SMS Token
+#  uri:
+#    url: 'https://platform.devtest.ringcentral.com/restapi/oauth/token'
+#    method: POST
+#    url_username: "{{ RINGCENTRAL_CLIENT_ID }}"
+#    url_password: "{{ RINGCENTRAL_CLIENT_SECRET }}"
+#    force_basic_auth: True
+#    body_format: json
+#    body:
+#      "username={{ RINGCENTRAL_USERNAME }}&password={{ RINGCENTRAL_PASSWORD }}&extension=101&grant_type=password"
+#    headers:
+#      Content-Type: 'application/x-www-form-urlencoded'
+#      Accept: application/json
+#    status_code: 200
+#  register: token_get
+#  retries: 2
+#
+#- name: CIAM Set SMS Token
+#  set_fact:
+#    rc_token: "{{ token_get.json.access_token }}"
+
+- name: CIAM Define Cypress.json file
+  lineinfile:
+    dest: "/builds/solutions/thunder/.gitlab-ci/cypress/CIAM_cypress.json"
+    create: yes
+    line: '{{ item }}'
+  with_items:
+    - '{'
+    - '  "projectId": "{{ CYPRESS_PROJECT_ID }}",'
+    - '  "pageLoadTimeout": 90000,'
+    - '  "defaultCommandTimeout": 30000,'
+    - '  "chromeWebSecurity": false,'
+    - '  "env": {'
+    - '    "baseUrl": "https://console-staging.pingone.com/?env={{ ADMIN_ENV_ID }}",'
+    - '    "ENV_ID": "{{ CIAM_ENV_ID }}",'
+    - '    "ENV_NM": "{{ env_name }}",'
+    - '    "CONSOLE_USERNAME": "{{ CONSOLE_USERNAME }}",'
+    - '    "CONSOLE_PASSWORD": "{{ CONSOLE_PASSWORD }}"'
+    - '    }'
+    - '}'

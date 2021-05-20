@@ -1,0 +1,62 @@
+- name: WF User Populations Get
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: pop_check
+  retries: 2
+
+
+- name: WF User Populations Check
+  set_fact: 
+    list_pops: "{{ pop_check.json._embedded.populations | map(attribute='name') | list }}"                              
+
+- name: WF User Population Check Sample Users ID
+  set_fact:  
+    sample_users: "{{ pop_check.json._embedded.populations |
+                    selectattr('name', 'match', 'Sample Users') |
+                    map(attribute='id') | list | first }}"
+  when: '"Sample Users" in list_pops'
+
+- name: WF User Population Check More Sample Users ID
+  set_fact:
+    more_sample: "{{ pop_check.json._embedded.populations |
+                    selectattr('name', 'match', 'More Sample Users') |
+                    map(attribute='id') | list | first }}"
+  when: '"More Sample Users" in list_pops'
+
+- name: WF User Population Contractor Set
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations/{{ sample_users }}'
+    method: PUT
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name" : "Contractors",
+        "description" : "This is a sample contractor population."
+      }
+    body_format: json
+    status_code: 200
+  retries: 2
+  when: '"Sample Users" in list_pops'
+
+- name: WF User Population Employee Set
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations/{{ more_sample }}'
+    method: PUT
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name" : "Employees",
+        "description" : "This is a sample employee population."
+      }
+    body_format: json
+    status_code: 200
+  retries: 2
+  when: '"More Sample Users" in list_pops'

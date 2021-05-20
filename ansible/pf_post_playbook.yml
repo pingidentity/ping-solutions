@@ -1,0 +1,32 @@
+- name: Solutions Ansible Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  tasks:
+  - name: Get BoM Components
+    uri:
+      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/billOfMaterials'
+      method: GET
+      headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      status_code: 200
+    register: bom_get
+    retries: 2
+
+  - name: Check BoM Components
+    set_fact:
+      bom_values: "{{ bom_get.json.products |
+                  map(attribute='type') |
+                  list }}"
+
+# Ping Federate Block
+  
+  - include: ./PF/POST/pf_ssp_cidr.yml
+    when: '"PING_FEDERATE" in bom_values'
+  
+  - include: ./PF/POST/pf_gw_create.yml
+    when: '"PING_FEDERATE" in bom_values'
+
+#  - include: ./PF/POST/pf_risk_adapter.yml
+#    when: '"PING_FEDERATE" in bom_values'

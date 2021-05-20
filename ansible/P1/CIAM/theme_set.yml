@@ -1,0 +1,154 @@
+- name: CIAM Theme Check
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/themes'
+    method: GET
+    headers:
+      content-type: application/x-www-form-urlencoded
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: theme_result
+  retries: 2
+
+
+- name: CIAM Theme Check Created Themes
+  set_fact: 
+    theme_list: "{{ theme_result.json._embedded.themes | 
+    map(attribute='template') | 
+    list }}"
+
+- name: CIAM Theme Create Focus Theme
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/themes'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "template": "focus",
+          "configuration": {
+              "logoType": "IMAGE",
+              "logo": {
+                  "href": "https://d3uinntk0mqu3p.cloudfront.net/branding/market/a3d073bc-3108-49ad-b96c-404bea59a1d0.png",
+                  "id": "00000000-0000-0000-0000-000000000000"
+              },
+              "backgroundColor": "#ededed",
+              "backgroundType": "COLOR",
+              "bodyTextColor": "#4a4a4a",
+              "cardColor": "#fcfcfc",
+              "headingTextColor": "#cb0020",
+              "linkTextColor": "#2996cc",
+              "buttonColor": "#cb0020",
+              "buttonTextColor": "#ffffff",
+              "name": "Ping Focus",
+              "footer": "Experience sweet, secure digital experiences."
+          }
+      
+      }
+    body_format: json
+    status_code: 200
+  retries: 2
+  when: '"focus" not in theme_list'
+
+- name: CIAM Theme Create Slate Theme
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/themes'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "template": "slate",
+          "configuration": {
+              "logoType": "IMAGE",
+              "logo": {
+                  "href": "https://d3uinntk0mqu3p.cloudfront.net/branding/market/a3d073bc-3108-49ad-b96c-404bea59a1d0.png",
+                  "id": "00000000-0000-0000-0000-000000000000"
+              },
+              "backgroundColor": "",
+              "backgroundType": "DEFAULT",
+              "bodyTextColor": "#4C4C4C",
+              "cardColor": "#FFFFFF",
+              "headingTextColor": "#4A4A4A",
+              "linkTextColor": "#5F5F5F",
+              "buttonColor": "#4A4A4A",
+              "buttonTextColor": "#FFFFFF",
+              "name": "Ping Slate",
+              "footer": "Experience sweet, secure digital experiences."
+          }
+      }
+    body_format: json
+    status_code: 200
+
+
+  retries: 2
+  when: '"slate" not in theme_list'
+
+- name: CIAM Theme Create Mural Theme
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/themes'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "template": "mural",
+          "configuration": {
+              "logoType": "IMAGE",
+              "logo": {
+                  "href": "https://d3uinntk0mqu3p.cloudfront.net/branding/market/a3d073bc-3108-49ad-b96c-404bea59a1d0.png",
+                  "id": "00000000-0000-0000-0000-000000000000"
+              },
+              "backgroundColor": "",
+              "backgroundType": "DEFAULT",
+              "bodyTextColor": "#000000",
+              "cardColor": "#fcfcfc",
+              "headingTextColor": "#000000",
+              "linkTextColor": "#2996cc",
+              "buttonColor": "#61b375",
+              "buttonTextColor": "#ffffff",
+              "name": "Ping Mural",
+              "footer": "Experience sweet, secure digital experiences."
+          }
+      }
+    body_format: json
+    status_code: 200
+  retries: 2
+  when: '"mural" not in theme_list'
+
+
+
+- name: CIAM Theme Create Split Theme
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/themes'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+          "template": "split",
+          "configuration": {
+              "logoType": "IMAGE",
+              "logo": {
+                  "href": "https://d3uinntk0mqu3p.cloudfront.net/branding/market/a3d073bc-3108-49ad-b96c-404bea59a1d0.png",
+                  "id": "00000000-0000-0000-0000-000000000000"
+              },
+              "backgroundColor": "#263956",
+              "backgroundType": "COLOR",
+              "bodyTextColor": "#263956",
+              "cardColor": "#fcfcfc",
+              "headingTextColor": "#686f77",
+              "linkTextColor": "#263956",
+              "buttonColor": "#263956",
+              "buttonTextColor": "#ffffff",
+              "name": "Ping Split",
+              "footer": "Experience sweet, secure digital experiences."
+          }
+      }
+    body_format: json
+    status_code: 200
+  retries: 2
+  when: '"split" not in theme_list'

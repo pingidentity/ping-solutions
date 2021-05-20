@@ -1,0 +1,336 @@
+- name: Get Environment Information
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: env_info
+  retries: 2
+
+- name: Get the ORG ID and API endpoint
+  set_fact: 
+    orgID: "{{ env_info.json.organization.id }}"
+    org_API: "{{ env_info.json._links.organization.href }}"                         
+
+- name: 'ORG Environment query'
+  uri:
+    url: '{{ org_API }}/environments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  retries: 2
+  register: org_info   
+  
+- name: Get Admin Environment ID
+  set_fact:
+    adminENV: "{{ org_info.json._embedded.environments |
+              selectattr('name', 'match', 'Administrators') |
+              map(attribute='id') |
+              list |
+              first }}"  
+
+- name: Get Schema
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/schemas'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: schema_check
+  retries: 2
+
+
+- name: Get Schema ID
+  set_fact: 
+    user_schema_id: "{{ schema_check.json._embedded.schemas |
+                    map(attribute='id') |
+                    list |
+                    first }}"                              
+
+- name: Get Administrators Population
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/populations'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: admin_pop
+  retries: 2
+
+- name: Get Administrators Population ID
+  set_fact: 
+    admin_pop_id: "{{ admin_pop.json._embedded.populations |
+                    selectattr('name', 'match', 'Administrators Population') |
+                    map(attribute='id') |
+                    list |
+                    first }}"
+
+- name: Get PF Administrators Group
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: admin_group
+  retries: 2
+
+- name: Check If PF Administrators Group Exists
+  set_fact:
+    admin_group_list: "{{ admin_group.json._embedded.groups |
+                    map(attribute='name') |
+                    list }}"
+
+- name: Create PF Administrators Group
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/groups'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name" : "PingFederate Administrators",
+        "description" : "User group for PingFed Admin SSO privileges.",
+        "userFilter": "population.id eq \"{{ admin_pop_id }}\""
+      }
+    body_format: json
+    status_code: 201
+  register: admin_group_create
+  when: '"PingFederate Administrators" not in admin_group_list'
+
+- name: Get PF Administrators Group (Exists)
+  set_fact:
+    pf_admin_group_id: "{{ admin_group.json._embedded.groups |
+                    selectattr('name', 'match', 'PingFederate Administrators') |
+                    map(attribute='id') |
+                    list | first }}"
+  when: '"PingFederate Administrators" in admin_group_list'
+
+- name: Get PF Administrators Group (Not Exists)
+  set_fact:
+    pf_admin_group_id: "{{ admin_group_create.json._embedded.id
+                        list | first }}"
+  when: '"PingFederate Administrators" not in admin_group_list'                     
+
+- name: Get PF Administrators Application
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/applications'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: admin_app
+  retries: 2
+
+- name: Check If Administrators Application Exists
+  set_fact:
+    admin_app_list: "{{ admin_app.json._embedded.applications | 
+                    map(attribute='name') |
+                    list }}"                 
+
+- name: Create PF Administrators Application
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/applications'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "enabled": true,
+        "name": "PingFederate Admin SSO",
+        "#description": " ",
+        "type": "WEB_APP",
+        "accessControl": {
+          "role": {
+            "type": "ADMIN_USERS_ONLY"
+            },
+          "group": {
+            "type": "ANY_GROUP",
+            "groups": [
+              {
+                "id": "{{ pf_admin_group_id }}"
+              }
+            ]
+          }
+        },
+        "protocol": "OPENID_CONNECT",
+        "grantTypes": [
+          "AUTHORIZATION_CODE"
+          ],
+        "redirectUris": [
+          "{{ PINGFED_BASE_URL }}/pingfederate/app?service=finishsso"
+          ],
+        "responseTypes": [
+          "CODE"
+          ],
+        "tokenEndpointAuthMethod": "CLIENT_SECRET_BASIC",
+        "pkceEnforcement": "OPTIONAL"
+      }
+    body_format: json
+    status_code: 201
+  when: '"PingFederate Admin SSO" not in admin_app_list'
+
+- name: Get Applications Again
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/applications'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: admin_app_again
+  retries: 2
+
+- name: Get PF Admin SSO ID
+  set_fact:
+    admin_app_id: "{{ admin_app_again.json._embedded.applications | 
+                    selectattr('name', 'match', 'PingFederate Admin SSO') |
+                    map(attribute='id') |
+                    list | first }}"                 
+
+- name: Get Applications Attributes
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/applications/{{ admin_app_id }}/attributes'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: admin_app_again
+  retries: 2
+
+- name: Get PF Admin SSO Attributes
+  set_fact:
+    name_attr: "{{ admin_app_again.json._embedded.attributes | 
+                    map(attribute='name') | list }}"
+    group_id_attr: "{{ admin_app_again.json._embedded.attributes | 
+                    map(attribute='name') | list }}"
+
+- name: Create PF Administrators Application Attribute
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/applications/{{ admin_app_id }}/attributes'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "name",
+        "value": "${user.name.formatted}",
+        "required": false
+      }
+    body_format: json
+    status_code: 201
+  when: '"name" not in name_attr'
+
+- name: Create PF Administrators Application Group Attribute
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/applications/{{ admin_app_id }}/attributes'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "group_id",
+        "value": "${user.memberOfGroupIDs}",
+        "required": true
+      }
+    body_format: json
+    status_code: 201
+  when: '"group_id" not in group_id_attr'
+
+- name: Get OAUTH Content
+  uri:
+    url: '{{ AUTH_SERVER_BASE_URL }}/{{ adminENV }}/as/.well-known/openid-configuration'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: oidc_vals
+  retries: 2
+
+- name: Set OAUTH Variables
+  set_fact:
+    app_auth_ep: "{{ oidc_vals.json.authorization_endpoint }}"
+    app_token_ep: "{{ oidc_vals.json.token_endpoint }}"
+    app_userinfo_ep: "{{ oidc_vals.json.userinfo_endpoint }}"
+    app_so_ep: "{{ oidc_vals.json.end_session_endpoint }}"
+    app_issuer: "{{ oidc_vals.json.issuer }}"
+    app_scopes: '{{ oidc_vals.json.scopes_supported | list | join(" ") }}'
+
+- name: Get PF Applications Secret
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ adminENV }}/applications/{{ admin_app_id }}/secret'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: admin_app_secret
+  retries: 2
+
+- name: Store PF App Secret
+  set_fact:
+    app_secret: "{{ admin_app_secret.json.secret }}"    
+
+- name: Set PF File Location
+  set_fact:
+    oidc_file: "./oidc.properties.tmp"
+    run_file: "./run.properties.tmp"
+
+- name: Check if OIDC Files Exist
+  stat:
+    path: "{{ oidc_file }}"
+  register: oidc_present
+
+- name: Rename OIDC File if Exists
+  shell: "mv {{ oidc_file }} {{ oidc_file }}.old"
+  when: oidc_present.stat.exists == true
+
+#client secret maybe needs to be run against obfuscate script in PF
+
+- name: Write PF Variables to OIDC File
+  copy:
+    dest: "{{ oidc_file }}"
+    content: |
+      PF_OIDC_CLIENT_ID={{ admin_app_id }}
+      PF_OIDC_CLIENT_AUTHN_METHOD=client_secret_basic
+      PF_OIDC_CLIENT_SECRET={{ app_secret }}
+      PF_OIDC_AUTHORIZATION_ENDPOINT={{ app_auth_ep }}
+      PF_OIDC_TOKEN_ENDPOINT={{ app_token_ep }}
+      PF_OIDC_USER_INFO_ENDPOINT={{ app_userinfo_ep }}
+      PF_OIDC_END_SESSION_ENDPOINT={{ app_so_ep }}
+      PF_OIDC_ISSUER={{ app_issuer }}
+      PF_OIDC_ACR_VALUES=
+      PF_OIDC_SCOPES={{ app_scopes }}
+      PF_OIDC_USERNAME_ATTRIBUTE_NAME=sub
+      PF_OIDC_ROLE_ATTRIBUTE_NAME=group_id
+      PF_OIDC_ROLE_ADMIN={{ pf_admin_group_id }}
+      PF_OIDC_ROLE_CRYPTOMANAGER={{ pf_admin_group_id }}
+      PF_OIDC_ROLE_USERADMIN={{ pf_admin_group_id }}
+      PF_OIDC_ROLE_EXPRESSIONADMIN=eadmin
+      PF_OIDC_ROLE_AUDITOR=
+
+- name: Check if Run File Exist
+  stat:
+    path: "{{ run_file }}"
+  register: run_present
+
+- name: Rename OIDC File if Exists
+  shell: "mv {{ run_file }} {{ run_file }}.old"
+  when: run_present.stat.exists == true
+
+- name: Set PF_ADMIN_HOSTNAME If Not Set
+  set_fact:
+    pf_admin_hostname: "{{ PINGFED_BASE_URL }}"
+
+- name: Write PF Variables to Run File
+  copy:
+    dest: "{{ run_file }}"
+    content: |
+      PF_ADMIN_PUBLIC_HOSTNAME={{ pf_admin_hostname }}
+      PF_ADMIN_CONSOLE_TITLE=PingFederate Admin SSO
+      PF_ADMIN_CONSOLE_ENVIRONMENT={{ adminENV }}
+      PF_CONSOLE_AUTHENTICATION=OIDC

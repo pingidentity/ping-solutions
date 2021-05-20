@@ -1,0 +1,181 @@
+- name: PF Risk Adapter Gateway Check
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/pingOneConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+    status_code: 200
+    validate_certs: no      
+  register: gateway_check
+  retries: 2
+
+- name: PF Risk Adapter Gateway Connection List
+  set_fact:
+    gateway_id: "{{ gateway_check.json['items'] |
+                  map(attribute='id') |
+                  list | first }}"
+    gateway_env_id: "{{ gateway_check.json['items'] |
+                      map(attribute='environmentId') |
+                      list | first }}"
+
+- name: PF Risk Adapter Gateway Conn ID set
+  set_fact:                        
+    gateway_val: "{{ gateway_id + '|' + gateway_env_id }}"
+
+- name: PF Risk Adapter Policy Check
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/riskPolicySets'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: risk_policy_result
+  retries: 2
+
+- name: PF Risk Adapter Policy ID Set
+  set_fact:
+    risk_pol_id: "{{ risk_policy_result.json._embedded.riskPolicySets |
+                  map(attribute='id') |
+                  list | first }}"
+
+- name: PF Risk Adapter List Get
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/adapters'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+    status_code: 200
+    validate_certs: no      
+  register: adapter_check
+  retries: 2
+
+- name: PF Risk Adapter List Check
+  set_fact:
+    adapter_list: "{{ adapter_check.json['items'] |
+                  map(attribute='id') |
+                  list }}"
+
+- name: PF Risk Adapter Create
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/adapters'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+    body: >
+      {
+        "id": "demop1risk",
+        "name": "Demo PingOne Risk Adapter",
+        "pluginDescriptorRef": {
+          "id": "com.pingidentity.adapters.pingone.risk.PingOneRiskManagementIdpAdapter",
+          "location": "{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/adapters/descriptors/com.pingidentity.adapters.pingone.risk.PingOneRiskManagementIdpAdapter"
+        },
+        "configuration": {
+          "tables": [
+            {
+              "name": "Additional User Attributes (optional)",
+              "rows": []
+            },
+            {
+              "name": "PingOne Risk API Response Mappings (optional)",
+              "rows": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "PingOne Environment",
+              "value": "{{ gateway_val }}"
+            },
+            {
+              "name": "Risk Policy ID",
+              "value": "{{ risk_pol_id }}"
+            },
+            {
+              "name": "Include Device Profile",
+              "value": "true"
+            },
+            {
+              "name": "Device Profiling Method",
+              "value": "Captured by this adapter"
+            },
+            {
+              "name": "Device Profiling Timeout",
+              "value": "5000"
+            },
+            {
+              "name": "Cookie Name Prefix",
+              "value": "pingone.risk.device.profile"
+            },
+            {
+              "name": "Failure Mode",
+              "value": "Continue with fallback policy decision"
+            },
+            {
+              "name": "Fallback Policy Decision Value",
+              "value": "MEDIUM"
+            },
+            {
+              "name": "API Request Timeout",
+              "value": "2000"
+            },
+            {
+              "name": "Proxy Settings",
+              "value": "System Defaults"
+            },
+            {
+              "name": "Custom Proxy Host",
+              "value": ""
+            },
+            {
+              "name": "Custom Proxy Port",
+              "value": ""
+            }
+          ]
+        },
+        "attributeContract": {
+          "coreAttributes": [
+            {
+              "name": "riskLevel",
+              "masked": false,
+              "pseudonym": false
+            },
+            {
+              "name": "riskValue",
+              "masked": false,
+              "pseudonym": true
+            }
+          ],
+          "extendedAttributes": [],
+          "maskOgnlValues": false
+        },
+        "attributeMapping": {
+          "attributeSources": [],
+          "attributeContractFulfillment": {
+            "riskLevel": {
+              "source": {
+                "type": "ADAPTER"
+              },
+              "value": "riskLevel"
+            },
+            "riskValue": {
+              "source": {
+                "type": "ADAPTER"
+              },
+              "value": "riskValue"
+            }
+          },
+          "issuanceCriteria": {
+            "conditionalCriteria": []
+          }
+        }
+      }
+    body_format: json
+    status_code: 201
+    validate_certs: no      
+  register: adapter_check
+  retries: 2

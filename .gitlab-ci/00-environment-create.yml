@@ -1,0 +1,14 @@
+- name: Solutions Pipeline Create Environment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+  #make the CIAM Environment
+  - name: CIAM Environment Creation
+    include: /ansible/playbooks/.gitlab-ci/ansible-pipeline/00-ciam-env-create.yml
+  
+  #make the WF Environment
+  - name: WF Environment Creation
+    include: /ansible/playbooks/.gitlab-ci/ansible-pipeline/00-wf-env-create.yml
+  
