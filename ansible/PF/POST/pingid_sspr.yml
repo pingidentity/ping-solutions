@@ -1,0 +1,254 @@
+# Get the List of all data stores currently in PingFederate  
+- name: SSPR using PINGID Check if Data store exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    follow_redirects: all
+    return_content: yes
+  register: check_ds
+
+# List all data stores by name
+- name: SSPR using PINGID List all Data stores
+  set_fact:
+    LIST_DS: "{{check_ds.json['items'] | map(attribute='name') | list}}"
+
+# Create LDAP data store if  Demo LDAP data store not retruned by LIST_DS
+- name: SSPR using PINGID Create LDAP DataStore
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+        "type": "LDAP",
+        "name": "Demo LDAP Data Store",
+        "useSsl":true,
+        "hostnames" : ["0.0.0.0"],
+        "userDN": "example_ldap_username",
+        "password": "example_ldap_password"
+        }
+    body_format: json
+    status_code: 201
+    follow_redirects: all
+  register: create_ds
+  when: '"Demo LDAP Data Store" not in LIST_DS or LIST_DS is not defined'
+
+# Get DataStore ID and name from create_ds task
+- name: SSPR using PINGID Get the Data Store ID and name from the created DataStore
+  set_fact:
+    DS_ID: "{{create_ds.json.id}}"
+    DS_NAME: "{{create_ds.json.name}}"
+  when: '"Demo LDAP Data Store" not in LIST_DS or LIST_DS is not defined'
+
+# Get DataStore ID and name from the list returned during the check_ds
+- name: SSPR using PINGID Get the Data Store ID and name from the Data store list returned
+  set_fact:
+    DS_ID: "{{ check_ds.json['items'] | selectattr('name','match','Demo LDAP Data Store') | map(attribute='id') | list | first }}"
+    DS_NAME: "{{ check_ds.json['items'] | selectattr('name','match','Demo LDAP Data Store') | map(attribute='name') | list | first }}"
+  when: '"Demo LDAP Data Store" in LIST_DS'
+
+# Get the PingID properties file form PingOne
+- name: SSPR using PINGID Get the PingId properties file
+  uri:
+    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEP_ID}}/pingIdSettings'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+      content-type: text/plain
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: pingid_properties
+
+- name: Base64 encode the Values in PingID properties file
+  set_fact:
+    PINGID_PROP: "{{pingid_properties.content | b64encode}}"
+
+# Get the List of all PCV's currently in PingFederate  
+- name: SSPR using PINGID Check if LDAP password credential validator with the same name exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: check_pcv
+
+# List of all PCV's by name
+- name: SSPR using PINGID List all Password credential validators
+  set_fact:
+    LIST_PCV: "{{check_pcv.json['items'] | map(attribute='name') | list}}"
+
+# Create LDAP PCV if the Demo_LDAP_PCV not returned by LIST_PCV
+- name: SSPR using PINGID Create LDAP Password credential Validator
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+          "id": "SampleID",
+          "name": "Demo_LDAP_PCV",
+          "pluginDescriptorRef": {
+              "id": "org.sourceid.saml20.domain.LDAPUsernamePasswordCredentialValidator",
+              "location": "https://{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators/descriptors/org.sourceid.saml20.domain.LDAPUsernamePasswordCredentialValidator"
+          },
+          "configuration": {
+              "fields": [
+              {
+                  "name": "LDAP Datastore",
+                  "value": "{{DS_ID}}"
+              },
+              {
+                  "name": "Search Base",
+                  "value": "dc=example,dc=com"
+              },
+              {
+                  "name": "Search Filter",
+                  "value": "sAMAccountName=${username}"
+              },
+              {
+              "name": "PingID Username Attribute",
+              "value": "mail"
+              }                
+            ]
+          }
+          }
+    body_format: json
+    status_code: 201
+    follow_redirects: all
+  register: create_pcv
+  when: '"Demo_LDAP_PCV" not in LIST_PCV or LIST_PCV is not defined'
+
+# Get PCV_ID and name from  create_pcv task
+- name: SSPR using PINGID Get the PCV ID and name from the created Password credential Validator
+  set_fact:
+    PCV_ID: "{{ create_pcv.json.id }}"
+    PCV_NAME: "{{ create_pcv.json.name}}"
+  when: '"Demo_LDAP_PCV" not in LIST_PCV or LIST_PCV is not defined'
+
+# Get PCV_ID and name from the list returned during the check_pcv
+- name: SSPR using PINGID Get the PCV ID and name from the returned list
+  set_fact:
+    PCV_ID: "{{ check_pcv.json['items'] | selectattr('name','match','Demo_LDAP_PCV') | map(attribute='id') | list | first }}"
+    PCV_NAME: "{{ check_pcv.json['items'] | selectattr('name','match','Demo_LDAP_PCV') | map(attribute='name') | list | first }}"
+  when: '"Demo_LDAP_PCV" in LIST_PCV'
+
+# Get the list of all adapters in PingFederate 
+- name: SSPR using PINGID Check if HTML form adapter with the same name exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    follow_redirects: all
+    return_content: yes
+  register: check_adap
+
+# List all adapters by name
+- name: SSPR using PINGID List all adapters
+  set_fact:
+    LIST_ADAPTER: "{{check_adap.json['items'] | map(attribute='name') | list}}"
+
+# Create HTML form adapter if DemoHTMLform is not retruned by LIST_ADAPTER
+- name: SSPR using PINGID Create HTML form adapter
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+              "id": "DemoHTML",
+              "name": "DemoHtmlForm",
+              "pluginDescriptorRef": {
+                  "id": "com.pingidentity.adapters.htmlform.idp.HtmlFormIdpAuthnAdapter"
+              },
+              "configuration": {
+                  "tables": [
+                  {
+                      "name": "Credential Validators",
+                      "rows": [
+                      {
+                          "fields": [
+                          {
+                              "name": "Password Credential Validator Instance",
+                              "value": "{{PCV_ID}}"
+                          }
+                          ]
+                      }
+                      ]
+                  }
+                  ],
+                  "fields": [
+                      {
+                          "name": "Allow Password Changes",
+                          "value": "true"
+                      },
+                      {
+                          "name": "Password Reset Type",
+                          "value": "PingID"
+                      },
+                      {
+                          "name": "PingID Properties",
+                          "value": "{{PINGID_PROP}}"
+                      }
+                  ]
+              },
+              "attributeContract": {
+                      "coreAttributes": [
+                      {
+                          "name": "username",
+                          "masked": false,
+                          "pseudonym": true
+                      }
+                      ]
+              }
+              }
+    body_format: json
+    status_code: 201
+    follow_redirects: all
+  register: create_html_adap
+  when: '"DemoHtmlForm" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
+
