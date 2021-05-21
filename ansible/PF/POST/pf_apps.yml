@@ -1,0 +1,238 @@
+- name: Get Signing Key Pairs
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/keyPairs/signing'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+  register: signing_key_pair_list
+  retries: 2
+
+- name: Signing Key Pairs (Existing)
+  set_fact:
+    skp_list: "{{ signing_key_pair_list.json['items'] |
+                    map(attribute='id') |
+                    list }}"
+
+- name: Signing Key Pair Create
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/keyPairs/signing/import'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: application/json
+    body: >
+      {
+        "id": "demo_signing_key_pair",
+        "fileData": "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",
+        "password": "2FederateM0re"
+      }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: key_pair_create
+  retries: 2
+  when: '"demo_signing_key_pair" not in skp_list'
+
+- name: Get Authentication Policy Contracts
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/authenticationPolicyContracts'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+  register: auth_pol_contracts
+  retries: 2
+
+- name: Authentication Policy Contracts (Existing)
+  set_fact:
+    auth_pol_list: "{{ auth_pol_contracts.json['items'] |
+                    map(attribute='name') |
+                    list }}"
+
+- name: Authentication Policy Contract Create
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/authenticationPolicyContracts'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: application/json
+    body: >
+      {
+            "id": "demo_auth_pol_contract",
+            "name": "demo_auth_pol_contract",
+            "coreAttributes": [
+              {
+                "name": "subject"
+              }
+            ],
+            "extendedAttributes": [
+              {
+                "name": "mail"
+              }
+            ]
+      }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: auth_pol_contract_create
+  retries: 2
+  when: '"demo_auth_pol_contract" not in auth_pol_list'
+
+# Get the list of all CIDR selectors returned by PingFederate
+- name: PF Self Serve PWD and CIDR Get the list of CIDR Selectors
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationSelectors'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: check_cidr
+
+# List all the CIDR selectors returned by name
+- name: PF Self Serve PWD and CIDR List the CIDR Selectors configured by name
+  set_fact:
+    LIST_CIDR: "{{check_cidr.json['items'] | map(attribute='name') | list}}"
+
+- name: Get Applications
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/spConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+  register: apps
+  retries: 2
+
+- name: Applications (Existing)
+  set_fact:
+    apps_list: "{{ apps.json['items'] |
+                    map(attribute='id') |
+                    list }}"
+
+- name: Demo LDAP Application Create
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/spConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: application/json
+    body: >
+      {
+        "type": "SP",
+        "id": "MFA_CIDR_App",
+        "name": "Demo Multi_Factor when Outside CIDR Range",
+        "entityId": "Demo_App",
+        "active": true,
+        "contactInfo": {},
+        "loggingMode": "STANDARD",
+        "virtualEntityIds": [],
+        "licenseConnectionGroup": "",
+        "credentials": {
+          "certs": [],
+          "signingSettings": {
+            "signingKeyPairRef": {
+              "id": "demo_signing_key_pair",
+              "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/keyPairs/signing/demo_signing_key_pair"
+            },
+            "includeCertInSignature": false,
+            "includeRawKeyInSignature": false,
+            "algorithm": "SHA256withRSA"
+          }
+        },
+        "spBrowserSso": {
+          "protocol": "SAML20",
+          "enabledProfiles": [
+            "IDP_INITIATED_SSO"
+          ],
+          "alwaysSignArtifactResponse": false,
+          "ssoServiceEndpoints": [
+            {
+              "binding": "POST",
+              "url": "https://decoder.pingidentity.cloud/saml",
+              "isDefault": true,
+              "index": 0
+            }
+          ],
+          "signAssertions": false,
+          "signResponseAsRequired": true,
+          "spSamlIdentityMapping": "STANDARD",
+          "requireSignedAuthnRequests": false,
+          "assertionLifetime": {
+            "minutesBefore": 5,
+            "minutesAfter": 5
+          },
+          "encryptionPolicy": {
+            "encryptAssertion": false,
+            "encryptSloSubjectNameId": false,
+            "sloSubjectNameIDEncrypted": false,
+            "encryptedAttributes": []
+          },
+          "attributeContract": {
+            "coreAttributes": [
+              {
+                "name": "SAML_SUBJECT",
+                "nameFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+              }
+            ],
+            "extendedAttributes": []
+          },
+          "adapterMappings": [
+            {
+              "attributeSources": [],
+              "attributeContractFulfillment": {
+                "SAML_SUBJECT": {
+                  "source": {
+                    "type": "TEXT"
+                  },
+                  "value": "subject"
+                }
+              },
+              "issuanceCriteria": {
+                "conditionalCriteria": []
+              },
+              "restrictVirtualEntityIds": false,
+              "restrictedVirtualEntityIds": [],
+              "idpAdapterRef": {
+                "id": "HtmlformDemo",
+                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/HtmlformDemo"
+              },
+              "abortSsoTransactionAsFailSafe": false
+            }
+          ],
+          "authenticationPolicyContractAssertionMappings": []
+        },
+        "connectionTargetType": "STANDARD"
+      }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: demo_app
+  retries: 2
+  when: '"MFA_CIDR_App" not in apps_list'
