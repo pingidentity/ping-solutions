@@ -134,6 +134,109 @@
                     map(attribute='id') |
                     list }}"
 
+- name: Demo PingID Application Create
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/spConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: application/json
+    body: >
+      {
+        "type": "SP",
+        "id": "Demo_CIDR_App",
+        "name": "CIDR Authentication Selector App",
+        "entityId": "Demo_CIDR_App",
+        "active": true,
+        "contactInfo": {},
+        "loggingMode": "STANDARD",
+        "virtualEntityIds": [],
+        "licenseConnectionGroup": "",
+        "credentials": {
+          "certs": [],
+          "signingSettings": {
+            "signingKeyPairRef": {
+              "id": "demo_signing_key_pair",
+              "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/keyPairs/signing/demo_signing_key_pair"
+            },
+            "includeCertInSignature": false,
+            "includeRawKeyInSignature": false,
+            "algorithm": "SHA256withRSA"
+          }
+        },
+        "spBrowserSso": {
+          "protocol": "SAML20",
+          "enabledProfiles": [
+            "IDP_INITIATED_SSO"
+          ],
+          "alwaysSignArtifactResponse": false,
+          "ssoServiceEndpoints": [
+            {
+              "binding": "POST",
+              "url": "https://decoder.pingidentity.cloud/saml",
+              "isDefault": true,
+              "index": 0
+            }
+          ],
+          "signAssertions": false,
+          "signResponseAsRequired": true,
+          "spSamlIdentityMapping": "STANDARD",
+          "requireSignedAuthnRequests": false,
+          "assertionLifetime": {
+            "minutesBefore": 5,
+            "minutesAfter": 5
+          },
+          "encryptionPolicy": {
+            "encryptAssertion": false,
+            "encryptSloSubjectNameId": false,
+            "sloSubjectNameIDEncrypted": false,
+            "encryptedAttributes": []
+          },
+          "attributeContract": {
+            "coreAttributes": [
+              {
+                "name": "SAML_SUBJECT",
+                "nameFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+              }
+            ],
+            "extendedAttributes": []
+          },
+          "adapterMappings": [
+            {
+              "attributeSources": [],
+              "attributeContractFulfillment": {
+                "SAML_SUBJECT": {
+                  "source": {
+                    "type": "ADAPTER"
+                  },
+                  "value": "subject"
+                }
+              },
+              "issuanceCriteria": {
+                "conditionalCriteria": []
+              },
+              "restrictVirtualEntityIds": false,
+              "restrictedVirtualEntityIds": [],
+              "idpAdapterRef": {
+                "id": "PingIDdemo",
+                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/PingIDdemo"
+              },
+              "abortSsoTransactionAsFailSafe": false
+            }
+          ],
+          "authenticationPolicyContractAssertionMappings": []
+        },
+        "connectionTargetType": "STANDARD"
+      }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: ping_id_app
+  retries: 2
+  when: '"Demo_CIDR_App" not in apps_list'
+
 - name: Demo LDAP Application Create
   uri:
     url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/spConnections'

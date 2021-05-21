@@ -1,0 +1,503 @@
+- name: PF External IdP Get Signing Certs
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/keyPairs/signing'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+  register: signing_cert_list
+  retries: 2
+
+#again json['items'] due to protected value
+- name: PF External IdP Check Signing Certs
+  set_fact:
+    signing_cert_ids: "{{ signing_cert_list.json['items'] |
+                      map(attribute='id') |
+                      list }}"  
+
+- name: PF External IdP Create Signing Cert
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/keyPairs/signing/generate'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    body: >
+      {
+        "id": "demo_pf_p1_signing_cert",
+        "commonName": "DemoSAML",
+        "organization": "PingOneForC",
+        "city": "Austin",
+        "state": "TX",
+        "country": "US",
+        "validDays": "365",
+        "keyAlgorithm": "RSA",
+        "keySize": "2048",
+        "signatureAlgorithm": "SHA256withRSA"
+      }
+    status_code: 201
+    validate_certs: no
+  register: signing_cert
+  retries: 2
+  when: '"demo_pf_p1_signing_cert" not in signing_cert_ids'
+
+- name: PF External IdP Get Public Signing Key
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/keyPairs/signing/demo_pf_p1_signing_cert/certificate'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+    dest: "./pf_pub.crt"
+  register: signing_pub_key
+  retries: 2
+
+- name: PF External IdP Get Authentication Policy Contracts
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/authenticationPolicyContracts'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+  register: auth_pol_list
+  retries: 2
+
+#again json['items'] due to protected value
+- name: PF External IdP Check Signing Certs
+  set_fact:
+    auth_pol_ids: "{{ auth_pol_list.json['items'] |
+                      map(attribute='id') |
+                      list }}"  
+
+- name: PF External IdP Create Authorization Policy Contract
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/authenticationPolicyContracts'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    body: >
+      {
+        "id": "demo_saml_pol_contract",
+        "name": "Demo_Simple_Contract",
+        "coreAttributes": [
+          {
+            "name": "subject"
+          }
+          ],
+        "extendedAttributes": [
+          {
+            "name": "mail"
+          }
+          ]
+      }
+    status_code: 201
+    validate_certs: no
+  register: signing_cert
+  retries: 2
+  when: '"demo_saml_pol_contract" not in auth_pol_ids'
+
+- name: PF External IdP Get SP Connections
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/spConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+  register: sp_conn_list
+  retries: 2
+
+#again json['items'] due to protected value
+- name: PF External IdP Check Signing Certs
+  set_fact:
+    sp_conn_ids: "{{ sp_conn_list.json['items'] |
+                      map(attribute='id') |
+                      list }}" 
+
+- name: PF External IdP Create SP Connection
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/idp/spConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: POST
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    body: >
+      {
+      "type": "SP",
+      "id": "demo_pf_sp_conn",
+      "entityId": "Demo_SP_Connection",
+      "name": "Demo SP Connection",
+      "active": "true",
+      "contactInfo": {},
+      "loggingMode": "STANDARD",
+      "virtualEntityIds": [],
+      "licenseConnectionGroup": "",
+      "credentials": {
+        "certs": [],
+        "signingSettings": {
+          "signingKeyPairRef": {
+            "id": "demo_pf_p1_signing_cert",
+            "location": "{{ PINGFED_BASE_URL }}/pf-admin-api/v1/keyPairs/signing/demo_pf_p1_signing_cert"
+            },
+        "includeCertInSignature": false,
+        "includeRawKeyInSignature": false,
+        "algorithm": "SHA256withRSA"
+        }
+      },
+      "spBrowserSso": {
+        "protocol": "SAML20",
+        "enabledProfiles": [
+          "IDP_INITIATED_SSO"
+          ], 
+        "ssoServiceEndpoints": [
+          {
+            "binding": "POST",
+            "url": "https://httpbin.org/anything",
+            "isDefault": true,
+            "index": 0
+          }
+        ],
+        "signAssertions": false,
+        "signResponseAsRequired": true,
+        "spSamlIdentityMapping": "STANDARD",
+        "requireSignedAuthnRequests": false,
+        "assertionLifetime": {
+          "minutesBefore": 5,
+          "minutesAfter": 5
+        },
+        "encryptionPolicy": {
+          "encryptAssertion": false,
+          "encryptSloSubjectNameId": false,
+          "sloSubjectNameIDEncrypted": false,
+          "encryptedAttributes": []
+        },
+        "attributeContract": {
+          "coreAttributes": [
+          {
+            "name": "SAML_SUBJECT",
+            "nameFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+          }
+          ],
+          "extendedAttributes": []
+        },
+        "adapterMappings": [],
+        "authenticationPolicyContractAssertionMappings": [
+          {
+            "attributeSources": [],
+            "attributeContractFulfillment": {
+              "SAML_SUBJECT": {
+                "source": {
+                  "type": "AUTHENTICATION_POLICY_CONTRACT"
+                },
+                "value": "subject"
+              }
+            },
+            "issuanceCriteria": {
+              "conditionalCriteria": []
+            },
+            "authenticationPolicyContractRef": {
+              "id": "demo_saml_pol_contract",
+              "location": "{{ PINGFED_BASE_URL }}/pf-admin-api/v1/authenticationPolicyContracts/demo_saml_pol_contract"
+            },
+            "restrictVirtualEntityIds": false,
+            "restrictedVirtualEntityIds": [],
+            "abortSsoTransactionAsFailSafe": false
+          }
+          ]
+        }
+      }
+      ]
+      }
+    status_code: 201
+    validate_certs: no
+  register: signing_cert
+  retries: 2
+  when: '"demo_pf_sp_conn" not in sp_conn_ids'
+
+- name: PF External IdP Get Server Information
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/serverSettings'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+      Content-Type: 'application/json'
+    status_code: 200
+    validate_certs: no
+  register: server_info_list
+  retries: 2
+
+#again json['items'] due to protected value
+- name: PF External IdP Get Server info
+  set_fact:
+    pf_ent_id: "{{ server_info_list.json.federationInfo.saml2EntityId }}" 
+    pf_base_url: "{{ server_info_list.json.federationInfo.baseUrl + '/idp/startSSO.ping?PartnerSpId=https%3A%2F%2Fhttpbin.org' }}"
+
+- name: PF External IdP Get Certificates
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/certificates'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: p1_certs
+  retries: 2
+
+- name: PF External IdP Get Cert Name
+  set_fact:
+    cert_list: "{{ p1_certs.json._embedded.certificates |
+                map(attribute='name') | list }}"
+
+- name: PF External IdP Import Certificate
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/certificates'
+    method: POST
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: multipart/form-data
+    body_format: form-multipart
+    body: 
+      usageType: SIGNING
+      file: 
+        content: "{{ lookup('file', './pf_pub.crt') }}"
+        filename: pf_pub.crt
+    status_code: 202
+  register: p1_cert_add
+  retries: 2
+  when: '"DemoSAML" not in cert_list'
+
+#alt gets depending on if added already or not
+- name: PF External IdP Get Certificate ID (Just Added)
+  set_fact:
+    p1_cert_id: "{{ p1_cert_add.json.id }}"
+  when: '"DemoSAML" not in cert_list'
+
+- name: PF External IdP Get Certificate ID (Already Defined)
+  set_fact:
+    p1_cert_id: "{{ p1_certs.json._embedded.certificates | 
+                selectattr('name', 'match', 'DemoSAML') |
+                map(attribute='id') |
+                list | first }}"
+  when: '"DemoSAML" in cert_list'
+
+- name: PF External IdP Delete Local Cert file
+  file:
+    path: "./pf_pub.crt"
+    state: absent
+
+- name: PF External IdP Get Population
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: pop_list
+  retries: 2
+
+- name:
+  set_fact:
+    pop_id: "{{ pop_list.json._embedded.populations |
+              selectattr('name', 'match', 'Employees') |
+              map(attribute='id') | list | first }}"
+
+- name: PF External IdP Get Signing Cert
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/keys'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: key_list
+  retries: 2
+
+- name: PF External IdP Get Signing Cert ID
+  set_fact:
+    key_id: "{{ key_list.json._embedded['keys'] |
+              selectattr('usageType', 'match', 'SIGNING') |
+              map(attribute='id') |
+              list | first }}"
+
+- name: PF External IdP Get External IdPs
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/identityProviders'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: idp_response
+  retries: 2
+
+- name: PF External IdP Check External IdPs
+  set_fact:
+    idp_list: "{{ idp_response.json._embedded.identityProviders |
+                  map(attribute='name') | list }}"
+
+- name: PF External IdP Get External IdP Id (Already Defined)
+  set_fact: 
+    ext_idp_id: "{{ idp_response.json._embedded.identityProviders |
+                    selectattr('name', 'match', 'Demo PF SAML APP') |
+                    map(attribute='id') | 
+                    list | first }}"
+  when: '"Demo PF SAML APP" in idp_list'
+
+- name: PF External IdP Create External IdP
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/identityProviders'
+    method: POST
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: application/json
+    body: >
+      {
+        "name": "Demo PF SAML APP",
+        "description": "This is a sample external IdP connection to Ping Federate using the SP application within PF.",
+        "type": "SAML",
+        "enabled": true,
+        "registration": {
+            "population": {
+                "id": "{{ pop_id }}"
+            }
+        },
+        "authnRequestSigned": false,
+        "ssoEndpoint": "{{ pf_base_url }}",
+        "ssoBinding": "HTTP_POST",
+        "idpVerification": {
+            "certificates": [
+                {
+                    "id": "{{ p1_cert_id }}"
+                }
+            ]
+        },
+        "spEntityId": "demo_pf_sp_app",
+        "spSigning": {
+            "key": {
+                "id": "{{ key_id }}"
+            },
+            "algorithm": "SHA256withRSA"
+        },
+        "idpEntityId": "{{ pf_ent_id }}"
+      }
+    body_format: json
+    status_code: 201
+  register: p1_external_idp
+  retries: 2
+  when: '"Demo PF SAML APP" not in idp_list'
+
+- name: PF External IdP Get External IdP Id (Just Added)
+  set_fact:
+    ext_idp_id: "{{ p1_external_idp.json.id }}"
+  when: '"Demo PF SAML APP" not in idp_list'
+
+
+- name: PF External IdP Get Sign On Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: sign_pols
+
+- name: PF External IdP Get List of Sign On Policies
+  set_fact:
+    sign_pol_list: "{{ sign_pols.json._embedded.signOnPolicies |
+                      map(attribute='name') |
+                      list }}"
+
+- name: PF External IdP Get New Sign On Policy ID (Already Defined)
+  set_fact:
+    sign_pol_id: "{{ sign_pols.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_External_IdP_Policy') |
+                    map(attribute='id') | list | first }}"
+  when: '"Demo_External_IdP_Policy" in sign_pol_list'
+
+- name: PF External IdP Create Sign On Policy
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: POST
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: application/json
+    body: >
+      {
+        "name": "Demo_External_IdP_Policy",
+        "default": false,
+        "description": "A basic policy showing off PingFederate as an external IdP used for sign on policy."
+      }
+    body_format: json
+    status_code: 201
+  register: p1_sign_pol
+  retries: 2
+  when: '"Demo_External_IdP_Policy" not in sign_pol_list'
+
+- name: PF External IdP Get New Sign On Policy ID (Just Added)
+  set_fact:
+    sign_pol_id: "{{ p1_sign_pol.json.id }}"
+  when: '"Demo_External_IdP_Policy" not in sign_pol_list'
+
+- name: PF External IdP Get Sign On Policy Actions
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ sign_pol_id }}/actions'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: sign_pol_act
+
+- name: PF External IdP Get List of Sign On Policy Actions
+  set_fact:
+    sign_pol_act_list: "{{ sign_pol_act.json._embedded.actions |
+                    map(attribute='priority') |
+                    list }}"
+
+- name: PF External IdP Create Sign On Policy Action
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ sign_pol_id }}/actions'
+    method: POST
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: application/json
+    body: >
+      {
+        "type": "IDENTITY_PROVIDER",
+        "priority": 1,
+        "passUserContext": false,
+        "registration": {
+            "enabled": true,
+            "population": {
+                "id": "{{ pop_id }}"
+            }
+        },
+        "identityProvider": {
+            "id": "{{ ext_idp_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  register: p1_sign_pol
+  retries: 2
+  when: '1 not in sign_pol_act_list'
