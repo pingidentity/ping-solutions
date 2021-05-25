@@ -415,6 +415,22 @@
     CIDR_NAME: "{{ check_cidr.json['items'] | selectattr('name','match','CIDRdemo') |map(attribute='name') | list | first }}"
   when: '"CIDRdemo" in LIST_CIDR'
 
+# Get the Environment Information from PingOne
+- name: PF Self Service PWD Reset and CIDR Get the Enviroment information
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: env_info
+  retries: 2
+
+# Get the ORG_ID from the Environment details
+- name: PF Self Service PWD Reset and CIDR Get the ORG_ID
+  set_fact: 
+    ORG_ID: "{{ env_info.json.organization.id }}"
+
 # Get the deployment list from PingOne
 - name: PF Self Service PWD Reset and CIDR Get the Deployment list
   uri:
