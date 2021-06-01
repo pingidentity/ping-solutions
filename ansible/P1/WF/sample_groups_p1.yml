@@ -12,10 +12,10 @@
 
 # List all Groups by name in P1
   - name: Create Sample groups in PingOne List Groups by name in PingOne
-    set_fact: 
+    set_fact:
       list_groups: "{{read_groups.json._embedded.groups | map(attribute='name') | list}} }}"
 
-# Get the Single_factor group_ID 
+# Get the Single_factor group_ID
   - name: Create Sample groups in PingOne Get the Single_factor_Group ID
     set_fact:
       single_factor_id: "{{read_groups.json._embedded.groups | selectattr('name','match','Single_Factor_Group') | map(attribute='id') | list | first }}"
@@ -38,7 +38,7 @@
       body: >
             {
               "name": "Single_Factor_Group",
-              "description": "This is a group for Single factor Aunthentication Policy",
+              "description": "This is a group for Single-Factor Authentication Policy",
               "customData": {}
             }
       body_format: json
@@ -47,8 +47,8 @@
     retries: 2
     when: '"Single_Factor_Group" not in list_groups'
 
-# Create Multi_Factor  user group 
-  - name: Create Sample groups in PingOne Create a Multi Factor user group
+# Create Multi_Factor  user group
+  - name: Create Sample groups in PingOne Create a Multi-Factor user group
     uri:
       url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups'
       method: POST
@@ -58,7 +58,7 @@
       body: >
             {
               "name": "Multi_Factor_Group",
-              "description": "This is a group for Multi factor Aunthentication Policy",
+              "description": "This is a group for Multi factor Authentication Policy",
               "customData": {}
             }
       body_format: json
@@ -89,7 +89,7 @@
         Content-Type: application/json
       body: >
             {
-              "name": "Single_Factor_Group",       
+              "name": "Single_Factor_Group",
               "userFilter": "(email sw \"a\") or (email sw \"b\") or (email sw \"c\") or (email sw \"d\") or (email sw \"e\") or (email sw \"f\") or (email sw \"g\") or (email sw \"h\") or (email sw \"i\") or (email sw \"j\") "
             }
       body_format: json
@@ -107,7 +107,7 @@
         Content-Type: application/json
       body: >
             {
-              "name": "Multi_Factor_Group",       
+              "name": "Multi_Factor_Group",
               "userFilter": "(email sw \"k\") or (email sw \"l\") or (email sw \"m\") or (email sw \"n\") or (email sw \"o\") or (email sw \"p\") or (email sw \"q\") or (email sw \"r\") or (email sw \"s\") or (email sw \"t\") or (email sw \"u\") or (email sw \"v\") or (email sw \"w\") or (email sw \"x\") or (email sw \"y\") or (email sw \"z\") or (email sw \"1\") or (email sw \"2\")"
             }
       body_format: json

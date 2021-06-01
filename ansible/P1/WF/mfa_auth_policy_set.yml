@@ -1,0 +1,69 @@
+- name: WF Auth Policy Get Population
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: pop_list
+  retries: 2
+
+- name: WF Auth Policy Get Population ID
+  set_fact:
+    popID: "{{ pop_list.json._embedded.populations |
+                  selectattr('name', 'match', 'Contractors') |
+                  map(attribute='id') |
+                  list |
+                  first }}"
+
+- name: WF Auth Policy Get List of Authorization Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: policy_check
+  retries: 2
+
+- name: WF Demo MFA App Second Get List of Authorization Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+    validate_certs: true
+  register: policy_action_check
+  retries: 2
+
+- name: WF Demo MFA App Filter Authorization Policy ID
+  set_fact:
+    pingid_auth_pol_id: "{{ policy_action_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Multi_Factor') |
+                    map(attribute='id') | list | first }}"
+
+- name: WF Auth Policy Passwordless MFA Policy Action Create Step 1
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ pingid_auth_pol_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "type": "LOGIN",
+        "recovery": {
+        "enabled": true
+        },
+        "registration": {
+        "enabled": false,
+        "population": {
+            "id": "{{ popID }}"
+          }
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
