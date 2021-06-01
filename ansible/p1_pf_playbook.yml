@@ -2,7 +2,7 @@
   hosts: localhost
   connection: local
   gather_facts: false
-  
+
   tasks:
   - name: Get BoM Components
     uri:
@@ -24,7 +24,7 @@
 #need to also look at deployment to see if PF deployed
   - include: ./PF/PRE/pf_admin_sso.yml
     when: '"PING_FEDERATE" in bom_values'
-  
+
 # CIAM Block
   - include: ./P1/CIAM/risk_policy_set.yml
     when: >
@@ -55,8 +55,13 @@
   - include: ./P1/WF/user_group_mod.yml
     when: '"PING_ID" in bom_values'
 
+  - include: ./P1/WF/sample_groups_p1.yml
+    when: '"PING_ID" in bom_values'
+
+  - include: ./P1/WF/sample_app_create.yml
+    when: '"PING_ID" in bom_values'
+
 # Ping Federate Block
 #need to also look at deployment to see if PF deployed
   - include: ./PF/PRE/pf_admin_sso.yml
     when: '"PING_FEDERATE" in bom_values'
-  
