@@ -448,7 +448,11 @@
 # Get the PingID deployment ID from the list
 - name: PF Self Service PWD Reset and CIDR Get the PingID deployment ID
   set_fact:
-    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | selectattr('deploymentType','match', 'PING_ENTERPRISE') | map(attribute='id') | list | first }}"
+    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | 
+                  selectattr('status','match', 'DEPLOYED') | 
+                  selectattr('productType','match', 'PING_ID') |
+                  selectattr('assignedEnvironment.id', 'match', ENV_ID) |
+                  map(attribute='id') | list | first }}"
 
 # Get the PingID properties file form PingOne
 - name: PF Self Service PWD Reset and CIDR Get the PingId properties file
