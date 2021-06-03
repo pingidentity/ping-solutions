@@ -241,3 +241,15 @@
     - '    "CONSOLE_PASSWORD": "{{ CONSOLE_PASSWORD }}"'
     - '    }'
     - '}'  
+
+- name: WF Wait for PingID Deployment to be DEPLOYED
+  uri:
+    url: '{{ API_LOCATION }}/organizations/{{ org_id }}/deployments/{{ deploymentId }}'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: ping_id_status
+  until: ping_id_status.json.status == "DEPLOYED"
+  retries: 20
+  delay: 15
