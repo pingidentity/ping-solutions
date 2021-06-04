@@ -62,10 +62,49 @@
     DS_NAME: "{{ check_ds.json['items'] | selectattr('name','match','Demo LDAP Data Store') | map(attribute='name') | list | first }}"
   when: '"Demo LDAP Data Store" in LIST_DS'
 
+# Get the Environment Information from PingOne
+- name: PF Self Service PWD Reset and CIDR Get the Enviroment information
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: env_info
+  retries: 2
+
+# Get the ORG_ID from the Environment details
+- name: PF Self Service PWD Reset and CIDR Get the ORG_ID
+  set_fact: 
+    ORG_ID: "{{ env_info.json.organization.id }}"
+
+# Get the deployment list from PingOne
+- name: PF Self Service PWD Reset and CIDR Get the Deployment list
+  uri:
+    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments'
+    method: GET
+    headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        content-type: text/plain
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: deployment_id
+  retries: 2
+
+# Get the PingID deployment ID from the list
+- name: PF Self Service PWD Reset and CIDR Get the PingID deployment ID
+  set_fact:
+    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | 
+                  selectattr('status','match', 'DEPLOYED') | 
+                  selectattr('productType','match', 'PING_ID') |
+                  selectattr('assignedEnvironment.id', 'match', ENV_ID) |
+                  map(attribute='id') | list | first }}"
+
 # Get the PingID properties file form PingOne
 - name: SSPR using PINGID Get the PingId properties file
   uri:
-    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEP_ID}}/pingIdSettings'
+    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEPLOY_ID}}/pingIdSettings'
     method: GET
     headers:
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
