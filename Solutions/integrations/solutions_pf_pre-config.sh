@@ -34,6 +34,7 @@ function pingfederate() {
             jq -rc '._embedded.environments[] | select(.name=="Administrators") | .id')
             if [[ -z "$ADMIN_ENV_ID" ]] || [[ "$ADMIN_ENV_ID" == "" ]]; then
                 echo "Unable to get ADMIN ENV ID, retrying..."
+                admin_env_try=$((admin_env_try+1))
                 check_admin_env
             else
                 echo "ADMIN ENV ID set, proceeding..."
@@ -176,6 +177,37 @@ function pingfederate() {
         fi
     }
 
+    function create_admin_group() {
+        # check if admin group already exists
+        CHECK_PF_ADMIN_GROUP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        | jq -rc '._embedded.groups[] | select (.name=="PingFederate Administrators") | .name')
+        if [ "$CHECK_PF_ADMIN_GROUP" != "PingFederate Administrators" ]; then
+            # create PingFed Administrators group
+              CREATE_PF_ADMIN_GROUP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/groups" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN"  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+                --header 'Content-Type: application/json' \
+                --data-raw '{
+                    "name" : "PingFederate Administrators",
+                    "description" : "User group for PingFed Admin SSO privileges.",
+                    "userFilter": "population.id eq \"'"$ADMIN_POP_ID"'\""
+                }')
+            # checks group created, as well as verify expected group name to ensure creation
+            CREATE_PF_ADMIN_GROUP_RESULT=$(echo $CREATE_PF_ADMIN_GROUP | sed 's@.*}@@')
+            if [[ $CREATE_PF_ADMIN_GROUP_RESULT == "201" ]]; then
+                echo "PingFederate Administrators group added, beginning content check..."
+                check_admin_group_content
+            elif [[ $CREATE_PF_ADMIN_GROUP_RESULT != "201" ]] && [[ "$admin_group_try" < "$api_call_retry_limit" ]]; then
+                echo "PingFederate Administrators group NOT added! Checking group existence..."
+                check_admin_group_content
+            else
+                echo "PingFederate Administrators group does NOT exist and attempts to create exceeded!"
+                exit 1
+            fi
+        else
+            echo "PingFederate Administrators group existence check passed. Checking content..."
+            check_admin_group_content
+        fi
+    }
+     create_admin_group
     #################################### Add Web OIDC App ####################################
     pf_admin_app_try=0
 
