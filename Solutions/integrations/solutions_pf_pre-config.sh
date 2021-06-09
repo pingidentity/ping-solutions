@@ -158,7 +158,7 @@ function pingfederate() {
     function check_admin_group_content() {
         CHECK_PF_ADMIN_GROUP_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         | jq -rc '._embedded.groups[] | select (.name=="PingFederate Administrators") | .name')
-        if [ "$CHECK_PF_ADMIN_GROUP_AGAIN" != "PingFederate Administrators" ]; then
+        if [ "$CHECK_PF_ADMIN_GROUP_AGAIN" != "PingFederate Administrators" ] && [[ "$admin_group_try" < "$api_call_retry_limit" ]]; then
             admin_group_tries_left=$((api_call_retry_limit-admin_group_try))
             echo "Unable to verify content... Retrying $admin_group_tries_left more time(s)..."
             admin_group_try=$((admin_group_try+1))
@@ -179,11 +179,11 @@ function pingfederate() {
 
     function create_admin_group() {
         # check if admin group already exists
-        CHECK_PF_ADMIN_GROUP=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+        CHECK_PF_ADMIN_GROUP=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/groups?filter=name%20eq%20%22PingFederate%20Administrators%22&limit=20" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         | jq -rc '._embedded.groups[] | select (.name=="PingFederate Administrators") | .name')
         if [ "$CHECK_PF_ADMIN_GROUP" != "PingFederate Administrators" ]; then
             # create PingFed Administrators group
-              CREATE_PF_ADMIN_GROUP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/groups" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN"  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+              CREATE_PF_ADMIN_GROUP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ADMIN_ENV_ID/groups" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
                 --header 'Content-Type: application/json' \
                 --data-raw '{
                     "name" : "PingFederate Administrators",
@@ -249,7 +249,7 @@ function pingfederate() {
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
         if [ "$CHECK_WEB_OIDC_APP" != "true" ]; then
             echo "PingFederate Admin SSO does not exist, adding now..."
-        WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ENV_ID/applications" \
+        WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ADMIN_ENV_ID/applications" \
         --header 'Content-Type: application/json' \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         --data-raw '{
