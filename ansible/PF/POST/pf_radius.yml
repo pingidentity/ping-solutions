@@ -1,0 +1,153 @@
+# Get the Environment Information from PingOne
+- name: PF Radius Server using PingID Radius Server using PingID PCV
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+    method: GET
+    headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+        status_code: 200
+  register: env_info
+  retries: 2
+
+# Get the ORG_ID from the Environment details
+- name: PF Radius Server using PingID PCV Get the ORG_ID
+  set_fact: 
+    ORG_ID: "{{ env_info.json.organization.id }}"
+
+# Get the deployment list from PingOne
+- name: PF Radius Server using PingID PCV Get the Deployment list
+  uri:
+    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments'
+    method: GET
+    headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        content-type: text/plain
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: deployment_id
+  retries: 2
+
+# Get the PingID deployment ID from the list
+- name: PF Radius Server using PingID PCV Get the PingID deployment ID
+  set_fact:
+    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | 
+                selectattr('status','match', 'DEPLOYED') | 
+                selectattr('productType','match', 'PING_ID') |
+                selectattr('assignedEnvironment.id', 'match', ENV_ID) |
+                map(attribute='id') | list | first }}"
+
+# Get the PingID properties file form PingOne
+- name: PF Radius Server using PingID PCV Get the PingId properties file
+  uri:
+    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEPLOY_ID}}/pingIdSettings'
+    method: GET
+    headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        content-type: text/plain
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: pingid_properties
+  retries: 2
+
+# Get the List of all PCV's currently in PingFederate  
+- name: PF Radius Server using PingID PCV Check if LDAP password credential validator with the same name exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+        X-XSRF-Header: PASS
+        content-type: application/json
+        X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: check_pcv
+  retries: 2
+
+# List of all PCV's by name
+- name: PF Radius Server using PingID PCV List all Password credential validators by name
+  set_fact:
+    LIST_PCV: "{{check_pcv.json['items'] | map(attribute='name') | list}}"
+
+- name: PF Radius Server using PingID PCV  Random Env Info Set
+  set_fact:
+    timestamp: "{{ lookup('pipe', 'date +%s') }}"
+
+# Create PingID PCV with Integerated Radius server
+- name: PF Radius Server using PingID PCV Create PingID PCV with integerated Radius Server
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+        X-XSRF-Header: PASS
+        content-type: application/json
+        X-BypassExternalValidation: true
+    body: >
+        {
+            "id": "DemoPingIDPCV",
+            "name": "Demo_PingID_PCV",
+            "pluginDescriptorRef": {
+                "id": "com.pingidentity.plugins.pcvs.pingid.PingIdPCV",
+                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators/descriptors/com.pingidentity.plugins.pcvs.pingid.PingIdPCV"
+            },
+            "configuration": {
+                "tables": [
+                {
+                    "name": "RADIUS Clients",
+                    "rows": [
+                    {
+                        "fields": [
+                        {
+                            "name": "Client IP",
+                            "value": "127.0.0.1"
+                        },
+                        {
+                            "name": "Client Shared Secret",
+                            "value": "{{timestamp}}"
+                        }
+                        ],
+                        "defaultRow": false
+                    }
+                    ]
+                }
+                ],
+                "fields": [
+                {
+                    "name": "RADIUS Server Authentication Port",
+                    "value": "1812"
+                },
+                {
+                    "name": "PingID Properties File",
+                    "value": "{{pingid_properties}}"
+                },
+                {
+                    "name": "Authentication During Errors",
+                    "value": "Bypass User"
+                }
+                ]
+            },
+            "attributeContract": {
+                "coreAttributes": [
+                {
+                    "name": "username"
+                }
+                ],
+                "extendedAttributes": []
+            }
+            
+        }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_pcv
+  retries: 2
+  when: '"Demo_PingID_PCV" not in LIST_PCV or LIST_PCV is not defined'
