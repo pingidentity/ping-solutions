@@ -44,7 +44,7 @@
 - name: WF User Modification Get User Data
   set_fact:
       admin_first: "{{ admin_user_info.json._embedded.users[0].name.given }}"
-      admin_last: "{{ admin_user_info.json._embedded.users[0].name.family }}"
+      admin_last: "{{ admin_user_info.json._embedded.users[0].name.family }}_Demo"
       admin_username: "{{ admin_user_info.json._embedded.users[0].username }}"
       admin_email: "{{ admin_user_info.json._embedded.users[0].email }}"
 
