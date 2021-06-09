@@ -11,8 +11,6 @@
 # PINGFED_BASE_URL
 # AUTH_SERVER_BASE_URL
 
-AS_ENDPOINT=$(echo "$AUTH_SERVER_BASE_URL/$ENV_ID/as")
-
 function pingfederate() {
     #define script for job.
 
@@ -37,6 +35,7 @@ function pingfederate() {
                 admin_env_try=$((admin_env_try+1))
                 check_admin_env
             else
+                AS_ENDPOINT=$(echo "$AUTH_SERVER_BASE_URL/$ADMIN_ENV_ID/as")
                 echo "ADMIN ENV ID set, proceeding..."
             fi
         else
