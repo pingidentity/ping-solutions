@@ -40,6 +40,9 @@
   - include: ./P1/CIAM/sample_app_create.yml
     when: '"PING_ONE_MFA" in bom_values'
 
+  - include: ./P1/CIAM/user_duplicate.yml
+    when: '"PING_ONE_MFA" in bom_values'
+
 # Workforce Block
   - include: ./P1/WF/risk_policy_set.yml
     when: >
@@ -52,7 +55,7 @@
   - include: ./P1/WF/user_pop_set.yml
     when: '"PING_ID" in bom_values'
 
-  - include: ./P1/WF/user_group_mod.yml
+  - include: ./P1/WF/user_duplicate.yml
     when: '"PING_ID" in bom_values'
 
   - include: ./P1/WF/sample_groups_p1.yml
