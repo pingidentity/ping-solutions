@@ -219,7 +219,7 @@ function pingfederate() {
     function check_pf_admin_app_content() {
         # check if Web OIDC App exists
         CHECK_WEB_OIDC_APP_AGAIN=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications" \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="'"$PF_APP_NM"'") | .enabled')
         if [ "$CHECK_WEB_OIDC_APP_AGAIN" != "true" ]; then
             admin_app_tries_left=$((api_call_retry_limit-pf_admin_app_try))
             echo "Unable to verify content... Retrying $admin_app_tries_left..."
@@ -229,7 +229,7 @@ function pingfederate() {
             echo "PingFederate Admin SSO app exists and verified content, setting variables to be used for later..."
             # this is used for functions below as well as the oidc file section at the bottom
             WEB_OIDC_APP_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications" \
-            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .id')
+            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="'"$PF_APP_NM"'") | .id')
             if [[ -z "$WEB_OIDC_APP_ID" ]] || [[ "$WEB_OIDC_APP_ID" == "" ]]; then
                 echo "PingFederate Admin SSO app ID unable to be set correctly, retrying..."
                 check_pf_admin_app_content
@@ -238,7 +238,7 @@ function pingfederate() {
             fi
             # this is used in the run properties file section at the bottom
             OIDC_APP_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications" \
-            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .name')
+            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="'"$PF_APP_NM"'") | .name')
             if [[ -z "$OIDC_APP_NAME" ]] || [[ "$OIDC_APP_NAME" == "" ]]; then
                 echo "PingFederate Admin SSO app name unable to be set correctly, retrying..."
                 check_pf_admin_app_content
@@ -250,44 +250,52 @@ function pingfederate() {
 
     function create_pf_admin_app() {
         # check if Web OIDC App exists
+        if [[ "$API_LOCATION" == *"api-staging.pingone.com"* ]] && [[ "$ENVIRONMENT_PREFIX" == true ]]; then
+            STAGE_ENV_NM=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID" \
+            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.name')
+            PF_APP_NM=$(echo "$STAGE_ENV_NM""_PingFederate Admin SSO")
+        else
+            PF_APP_NM='PingFederate Admin SSO'
+        fi
         CHECK_WEB_OIDC_APP=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications" \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="PingFederate Admin SSO") | .enabled')
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.applications[] | select (.name=="'"$PF_APP_NM"'") | .enabled')
         if [ "$CHECK_WEB_OIDC_APP" != "true" ]; then
             echo "PingFederate Admin SSO does not exist, adding now..."
-        WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ADMIN_ENV_ID/applications" \
-        --header 'Content-Type: application/json' \
-        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        --data-raw '{
-            "enabled": true,
-            "name": "PingFederate Admin SSO",
-            "#description": " ",
-            "type": "WEB_APP",
-            "accessControl": {
-            "role": {
-            "type": "ADMIN_USERS_ONLY"
-            },
-            "group": {
-            "type": "ANY_GROUP",
-            "groups": [
-                {
-                "id": "'"$PF_ADMIN_GROUP_ID"'"
+
+            WEB_OIDC_APP=$(curl -s --write-out "%{http_code}\n" --location --request POST "$API_LOCATION/environments/$ADMIN_ENV_ID/applications" \
+            --header 'Content-Type: application/json' \
+            --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+            --data-raw '{
+                "enabled": true,
+                "name": "'"$PF_APP_NM"'",
+                "#description": " ",
+                "type": "WEB_APP",
+                "accessControl": {
+                "role": {
+                "type": "ADMIN_USERS_ONLY"
+                },
+                "group": {
+                "type": "ANY_GROUP",
+                "groups": [
+                    {
+                    "id": "'"$PF_ADMIN_GROUP_ID"'"
+                    }
+                ]
                 }
-            ]
-            }
-            },
-            "protocol": "OPENID_CONNECT",
-            "grantTypes": [
-                "AUTHORIZATION_CODE"
-            ],
-            "redirectUris": [
-                "'"https://$PINGFED_BASE_URL:443/pingfederate/app?service=finishsso"'"
-            ],
-            "responseTypes": [
-                "CODE"
-            ],
-            "tokenEndpointAuthMethod": "CLIENT_SECRET_BASIC",
-            "pkceEnforcement": "OPTIONAL"
-        }')
+                },
+                "protocol": "OPENID_CONNECT",
+                "grantTypes": [
+                    "AUTHORIZATION_CODE"
+                ],
+                "redirectUris": [
+                    "'"https://$PINGFED_BASE_URL:443/pingfederate/app?service=finishsso"'"
+                ],
+                "responseTypes": [
+                    "CODE"
+                ],
+                "tokenEndpointAuthMethod": "CLIENT_SECRET_BASIC",
+                "pkceEnforcement": "OPTIONAL"
+            }')
 
             # checks app created, as well as verify expected app name to ensure creation
             WEB_OIDC_APP_RESULT=$(echo $WEB_OIDC_APP | sed 's@.*}@@')
