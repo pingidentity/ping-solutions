@@ -27,9 +27,9 @@ function pingfederate() {
         if [[ "$ORG_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]] && [[ "$admin_env_try" < "$api_call_retry_limit" ]] ; then
             echo "Org info available, getting ID..."
             #check which environment
-            if [[ "$API_LOCATION" == *"console-staging.pingone.com"* ]]; then
+            if [[ "$API_LOCATION" == *"api-staging.pingone.com"* ]]; then
                 ADMIN_ENV_NM='Core'
-            elif [[ "$API_LOCATION" == *"console.pingone.com"* ]]; then
+            elif [[ "$API_LOCATION" == *"api.pingone.com"* ]]; then
                 ADMIN_ENV_NM='Administrators'
             fi
             # get env id
