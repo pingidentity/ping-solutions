@@ -17,7 +17,7 @@
   set_fact:
     signing_cert_ids: "{{ signing_cert_list.json['items'] |
                       map(attribute='id') |
-                      list }}"  
+                      list }}"
 
 - name: PF External IdP Create Signing Cert
   uri:
@@ -81,7 +81,7 @@
   set_fact:
     auth_pol_ids: "{{ auth_pol_list.json['items'] |
                       map(attribute='id') |
-                      list }}"  
+                      list }}"
 
 - name: PF External IdP Create Authorization Policy Contract
   uri:
@@ -132,7 +132,7 @@
   set_fact:
     sp_conn_ids: "{{ sp_conn_list.json['items'] |
                       map(attribute='id') |
-                      list }}" 
+                      list }}"
 
 - name: PF External IdP Create SP Connection
   uri:
@@ -170,7 +170,7 @@
         "protocol": "SAML20",
         "enabledProfiles": [
           "IDP_INITIATED_SSO"
-          ], 
+          ],
         "ssoServiceEndpoints": [
           {
             "binding": "POST",
@@ -253,7 +253,7 @@
 #again json['items'] due to protected value
 - name: PF External IdP Get Server info
   set_fact:
-    pf_ent_id: "{{ server_info_list.json.federationInfo.saml2EntityId }}" 
+    pf_ent_id: "{{ server_info_list.json.federationInfo.saml2EntityId }}"
     pf_base_url: "{{ server_info_list.json.federationInfo.baseUrl + '/idp/startSSO.ping?PartnerSpId=https%3A%2F%2Fhttpbin.org' }}"
 
 - name: PF External IdP Get Certificates
@@ -279,9 +279,9 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
       Content-Type: multipart/form-data
     body_format: form-multipart
-    body: 
+    body:
       usageType: SIGNING
-      file: 
+      file:
         content: "{{ lookup('file', './pf_pub.crt') }}"
         filename: pf_pub.crt
     status_code: 202
@@ -297,7 +297,7 @@
 
 - name: PF External IdP Get Certificate ID (Already Defined)
   set_fact:
-    p1_cert_id: "{{ p1_certs.json._embedded.certificates | 
+    p1_cert_id: "{{ p1_certs.json._embedded.certificates |
                 selectattr('name', 'match', 'DemoSAML') |
                 map(attribute='id') |
                 list | first }}"
@@ -307,22 +307,6 @@
   file:
     path: "./pf_pub.crt"
     state: absent
-
-- name: PF External IdP Get Population
-  uri:
-    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations'
-    method: GET
-    headers:
-      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-    status_code: 200
-  register: pop_list
-  retries: 2
-
-- name:
-  set_fact:
-    pop_id: "{{ pop_list.json._embedded.populations |
-              selectattr('name', 'match', 'Employees') |
-              map(attribute='id') | list | first }}"
 
 - name: PF External IdP Get Signing Cert
   uri:
@@ -357,12 +341,12 @@
                   map(attribute='name') | list }}"
 
 - name: PF External IdP Get External IdP Id (Already Defined)
-  set_fact: 
+  set_fact:
     ext_idp_id: "{{ idp_response.json._embedded.identityProviders |
-                    selectattr('name', 'match', 'Demo PF SAML APP') |
-                    map(attribute='id') | 
+                    selectattr('name', 'match', 'Demo PingFederate SAML') |
+                    map(attribute='id') |
                     list | first }}"
-  when: '"Demo PF SAML APP" in idp_list'
+  when: '"Demo PingFederate SAML" in idp_list'
 
 - name: PF External IdP Create External IdP
   uri:
@@ -373,15 +357,10 @@
       Content-Type: application/json
     body: >
       {
-        "name": "Demo PF SAML APP",
+        "name": "Demo PingFederate SAML",
         "description": "This is a sample external IdP connection to Ping Federate using the SP application within PF.",
         "type": "SAML",
         "enabled": true,
-        "registration": {
-            "population": {
-                "id": "{{ pop_id }}"
-            }
-        },
         "authnRequestSigned": false,
         "ssoEndpoint": "{{ pf_base_url }}",
         "ssoBinding": "HTTP_POST",
@@ -405,13 +384,12 @@
     status_code: 201
   register: p1_external_idp
   retries: 2
-  when: '"Demo PF SAML APP" not in idp_list'
+  when: '"Demo PingFederate SAML" not in idp_list'
 
 - name: PF External IdP Get External IdP Id (Just Added)
   set_fact:
     ext_idp_id: "{{ p1_external_idp.json.id }}"
-  when: '"Demo PF SAML APP" not in idp_list'
-
+  when: '"Demo PingFederate SAML" not in idp_list'
 
 - name: PF External IdP Get Sign On Policies
   uri:
@@ -486,12 +464,6 @@
         "type": "IDENTITY_PROVIDER",
         "priority": 1,
         "passUserContext": false,
-        "registration": {
-            "enabled": true,
-            "population": {
-                "id": "{{ pop_id }}"
-            }
-        },
         "identityProvider": {
             "id": "{{ ext_idp_id }}"
         }
