@@ -2,7 +2,7 @@
   hosts: localhost
   connection: local
   gather_facts: false
-  
+
   tasks:
   - name: Get BoM Components
     uri:
@@ -22,16 +22,26 @@
 
 # Ping Federate Block
 
-  #- include: ./PF/POST/pf_external_idp.yml
-  #  when: '"PING_FEDERATE" in bom_values'
-  
+  - include: ./PF/POST/pf_external_idp.yml
+    when: '"PING_FEDERATE" in bom_values'
+
   - include: ./PF/POST/pf_ssp_cidr.yml
     when: >
       "PING_ID" in bom_values and
-      "PING_ONE_RISK" in bom_values
-  
+      "PING_FEDERATE" in bom_values
+
   - include: ./PF/POST/pf_gw_create.yml
     when: '"PING_FEDERATE" in bom_values'
+
+  - include: ./PF/POST/mfa_auth_policy.yml
+    when: >
+      "PING_ID" in bom_values and
+      "PING_FEDERATE" in bom_values
+
+  - include: ./PF/POST/sample_app_create.yml
+    when: >
+      "PING_ID" in bom_values and
+      "PING_FEDERATE" in bom_values
 
 #  - include: ./PF/POST/pf_risk_adapter.yml
 #    when: '"PING_FEDERATE" in bom_values'

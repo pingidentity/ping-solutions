@@ -64,6 +64,12 @@
   - include: ./P1/WF/sample_app_create.yml
     when: '"PING_ID" in bom_values'
 
+  - include: ./P1/WF/sample_groups_p1.yml
+    when: '"PING_ID" in bom_values'
+
+  - include: ./P1/WF/sample_app_create.yml
+    when: '"PING_ID" in bom_values'
+
 # Ping Federate Block
 #need to also look at deployment to see if PF deployed
   - include: ./PF/PRE/pf_admin_sso.yml
