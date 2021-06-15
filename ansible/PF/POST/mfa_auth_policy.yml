@@ -1,0 +1,161 @@
+- name: PF External IdP Get External IdPs
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/identityProviders'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: idp_response
+  retries: 2
+
+- name: PF External IdP Check External IdPs
+  set_fact:
+    idp_list: "{{ idp_response.json._embedded.identityProviders |
+                  map(attribute='name') | list }}"
+
+- name: PF External IdP Get External IdP Id (Already Defined)
+  set_fact:
+    ext_idp_id: "{{ idp_response.json._embedded.identityProviders |
+                    selectattr('name', 'match', 'Demo PingFederate SAML') |
+                    map(attribute='id') |
+                    list | first }}"
+  when: '"Demo PingFederate SAML" in idp_list'
+
+- name: WF Demo Get List of Authorization Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+    validate_certs: true
+  register: policy_check
+  retries: 2
+
+- name: WF Auth Policy Filter Authorization Policy Names
+  set_fact:
+    auth_pol_names: "{{ policy_check.json._embedded.signOnPolicies |
+                    map(attribute='name') |
+                    list }}"
+
+- name: WF Auth Policy Self Registration Policy Create
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "Demo_CIDR_With_Self-Service_Password_Reset",
+        "default": "false",
+        "description": "A sign-on policy that allows for CIDR and Self-Service Password Reset using a PingFederate authentication policy for Demo purposes"
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: >
+    "Demo_CIDR_With_Self-Service_Password_Reset" not in auth_pol_names and
+    "Demo PingFederate SAML" in idp_list
+
+- name: WF Auth Policy MFA Contractors Only
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "name": "Demo_MFA_Contractors_Only",
+        "default": "false",
+        "description": "A sign-on policy that allows Contractor population MFA using PingFederate authentication policy for Demo purposes"
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: >
+    "Demo_MFA_Contractors_Only" not in auth_pol_names and
+    "Demo PingFederate SAML" in idp_list
+
+- name: WF Demo Get List of Authorization Policies (Again)
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+    validate_certs: true
+  register: policy_check
+  retries: 2
+
+- name: WF Demo MFA Filter Authorization Policy ID
+  set_fact:
+    cidr_auth_pol_id: "{{ policy_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_CIDR_With_Self-Service_Password_Reset') |
+                    map(attribute='id') | list | first }}"
+    contractor_auth_pol_id: "{{ policy_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_MFA_Contractors_Only') |
+                    map(attribute='id') | list | first }}"
+
+- name: WF Auth Policy Passwordless MFA Policy Action Create Step
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ cidr_auth_pol_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "type": "IDENTITY_PROVIDER",
+        "signOnPolicy": {
+          "id": "{{ cidr_auth_pol_id }}"
+        },
+        "priority": 1,
+        "passUserContext": true,
+        "acrValues": "CIDR",
+        "registration": {
+            "enabled": false
+        },
+        "identityProvider": {
+          "id": "{{ ext_idp_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: >
+    cidr_auth_pol_id != "" and
+    "Demo_CIDR_With_Self-Service_Password_Reset" not in auth_pol_names and
+    "Demo PingFederate SAML" in idp_list
+
+- name: WF Auth Policy MFA Contractors Only Policy Action Create Step
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies/{{ contractor_auth_pol_id }}/actions'
+    method: POST
+    headers:
+      content-type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "type": "IDENTITY_PROVIDER",
+        "signOnPolicy": {
+          "id": "{{ contractor_auth_pol_id }}"
+        },
+        "priority": 1,
+        "passUserContext": true,
+        "acrValues": "POPULATION",
+        "registration": {
+            "enabled": false
+        },
+        "identityProvider": {
+          "id": "{{ ext_idp_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  retries: 2
+  when: >
+    contractor_auth_pol_id != "" and
+    "Demo_MFA_Contractors_Only" not in auth_pol_names and
+    "Demo PingFederate SAML" in idp_list
