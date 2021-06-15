@@ -9,11 +9,10 @@ stages:
   - 00-get-ready-to-rumble
   - 01-to-the-moon
   - 02-almost-to-the-moon
-  - 03-explore-the-frontier
-  #- 03-pack-up-for-home
+  #- 03-explore-the-frontier
   #- 04-explore-return-idk
   - 05-back-to-earth
-  
+
 default:
   services:
     - name: "docker:18.09-dind"
@@ -70,33 +69,33 @@ configure-WF-pf_post-environment:
   dependencies:
     - create-pipeline-environments
 
-test-configured-CIAM-environment:
-  stage: 03-explore-the-frontier
-  image: cypress/included:$CYPRESS_VERSION
-  script:
-    - mv .gitlab-ci/cypress/integration/CIAM/set cypress/integration/CIAM
-    - npx cypress run --config-file '.gitlab-ci/cypress/CIAM_cypress.json' --browser chrome --headless
-  dependencies:
-    - create-pipeline-environments
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"    
+# test-configured-CIAM-environment:
+#   stage: 03-explore-the-frontier
+#   image: cypress/included:$CYPRESS_VERSION
+#   script:
+#     - mv .gitlab-ci/cypress/integration/CIAM/set cypress/integration/CIAM
+#     - npx cypress run --config-file '.gitlab-ci/cypress/CIAM_cypress.json' --browser chrome --headless
+#   dependencies:
+#     - create-pipeline-environments
+#   artifacts:
+#     expire_in: 4 hours
+#     when: always
+#     paths:
+#       - "./cypress/videos/"
 
-test-configured-WF-environment:
-  stage: 03-explore-the-frontier
-  image: cypress/included:$CYPRESS_VERSION
-  script:
-    - mv .gitlab-ci/cypress/integration/WF/set cypress/integration/WF
-    - npx cypress run --config-file '.gitlab-ci/cypress/WF_cypress.json' --browser chrome --headless
-  dependencies:
-    - create-pipeline-environments
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"    
+# test-configured-WF-environment:
+#   stage: 03-explore-the-frontier
+#   image: cypress/included:$CYPRESS_VERSION
+#   script:
+#     - mv .gitlab-ci/cypress/integration/WF/set cypress/integration/WF
+#     - npx cypress run --config-file '.gitlab-ci/cypress/WF_cypress.json' --browser chrome --headless
+#   dependencies:
+#     - create-pipeline-environments
+#   artifacts:
+#     expire_in: 4 hours
+#     when: always
+#     paths:
+#       - "./cypress/videos/"
 
 delete-pipeline-environments:
   stage: 05-back-to-earth
