@@ -55,8 +55,8 @@
   register: gw_create
   retries: 2
   when: >
-    '"PING_FED-DEMO_Gateway" not in p1_gateway_list' and
-    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+    "PING_FED-DEMO_Gateway" not in p1_gateway_list and
+    "PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list
 
 - name: PF Gateway ID (Existing)
   set_fact:
@@ -65,15 +65,15 @@
                     map(attribute='id') |
                     list | first }}"
   when: >
-    '"PING_FED-DEMO_Gateway" not in gateway_list' and
-    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+    "PING_FED-DEMO_Gateway" in p1_gateway_list and
+    "PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list
 
 - name: PF Gateway ID (New)
   set_fact:
     gateway_id: "{{ gw_create.json.id }}"
   when: >
-    '"PING_FED-DEMO_Gateway" in p1_gateway_list' and
-    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+    "PING_FED-DEMO_Gateway" not in p1_gateway_list and
+    "PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list
 
 - name: PF Gateway Credential Check (Existing only)
   uri:
@@ -85,8 +85,8 @@
   register: credential_get
   retries: 2
   when: >
-    '"PING_FED-DEMO_Gateway" not in gateway_list' and
-    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+    "PING_FED-DEMO_Gateway" not in p1_gateway_list and
+     "PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list
 
 - name: PF Gateway Credential List (Existing only)
   set_fact:
@@ -95,8 +95,8 @@
                       map(attribute='id') |
                       list }}"
   when: >
-    '"PING_FED-DEMO_Gateway" not in gateway_list' and
-    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+    "PING_FED-DEMO_Gateway" not in p1_gateway_list and
+     "PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list
 
 - name: PF Gateway Credential Delete (Existing only)
   uri:
@@ -108,8 +108,8 @@
   retries: 2
   loop: "{{ credential_list }}"
   when: >
-    '"PING_FED-DEMO_Gateway" not in gateway_list' and
-    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+    "PING_FED-DEMO_Gateway" not in p1_gateway_list and
+     "PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list
 
 - name: PF Gateway Credential Create
   uri:
@@ -121,12 +121,12 @@
     status_code: 201
   register: gw_cred_response
   retries: 2
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+  when:  '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Cred Value
   set_fact:
     gateway_cred: "{{ gw_cred_response.json.credential }}"
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+  when:  '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Environment Roles Check
   uri:
@@ -137,7 +137,7 @@
     status_code: 200
   register: role_get
   retries: 2
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+  when:  '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 #use | to use multiple match values
 - name: PF Gateway List Roles
@@ -146,7 +146,7 @@
                       selectattr('name', 'match', 'Environment Admin|Identity Data Admin') |
                       map(attribute='id') |
                       list }}"
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+  when:  '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Roles Check
   uri:
@@ -157,14 +157,14 @@
     status_code: 200
   register: gw_role_get
   retries: 2
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+  when:  '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway List Gateway Roles
   set_fact:
     gw_role_list: "{{ gw_role_get.json._embedded.roleAssignments |
                   map(attribute='role.id') |
                   list }}"
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+  when:  '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Role Add
   uri:
@@ -189,7 +189,7 @@
   retries: 2
   when: >
     item not in gw_role_list and
-    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+     "PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list
 
 - name: PF Gateway Create In PF
   uri:
