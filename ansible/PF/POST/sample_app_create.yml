@@ -100,86 +100,6 @@
     status_code: 201
   when: '"demo_sf_app" not in app_list'
 
-- name: WF Demo SF App Second Get List of Authorization Policies
-  uri:
-    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
-    method: GET
-    headers:
-      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-    status_code: 200
-    validate_certs: true
-  register: policy_action_check
-  retries: 2
-
-# set auth policy IDs
-# - name: WF Demo SF App Filter Authorization Policy ID
-#   set_fact:
-#     sf_auth_pol_id: "{{ policy_action_check.json._embedded.signOnPolicies |
-#                     selectattr('name', 'match', 'Single_Factor') |
-#                     map(attribute='id') | list | first }}"
-
-- name: WF Demo SF App Get Applications Again
-  uri:
-    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
-    method: GET
-    headers:
-      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-    status_code: 200
-  register: app_info_check
-  retries: 2
-
-# - name: WF Demo Filter Application List
-#   set_fact:
-#     demo_sf_app_id: "{{ app_info_check.json._embedded.applications |
-#                       selectattr('spEntityId', 'defined') |
-#                       selectattr('spEntityId', 'match', 'demo_sf_app') |
-#                       map(attribute='id') | list | first }}"
-#     demo_mfa_app_id: "{{ app_info_check.json._embedded.applications |
-#                       selectattr('spEntityId', 'defined') |
-#                       selectattr('spEntityId', 'match', 'demo_mfa_app') |
-#                       map(attribute='id') | list | first }}"
-#     demo_mfa_cidr_app_id: "{{ app_info_check.json._embedded.applications |
-#                       selectattr('spEntityId', 'defined') |
-#                       selectattr('spEntityId', 'match', 'demo_mfa_cidr_app') |
-#                       map(attribute='id') | list | first }}"
-#     demo_mfa_cont_app_id: "{{ app_info_check.json._embedded.applications |
-#                       selectattr('spEntityId', 'defined') |
-#                       selectattr('spEntityId', 'match', 'demo_mfa_cont_app') |
-#                       map(attribute='id') | list | first }}"
-
-# - name: WF Demo SF Application Info
-#   uri:
-#     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_sf_app_id }}/signOnPolicyAssignments'
-#     method: GET
-#     headers:
-#       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-#     status_code: 200
-#   register: app_sop_info
-#   retries: 2
-
-# - name: WF Demo MFA App Check if PingID Policy Exists
-#   set_fact:
-#     check_sf_sop: "{{ app_sop_info.json._embedded.signOnPolicyAssignments |
-#                 map(attribute='priority') | list }}"
-
-# - name: WF Create Demo SF App Sign On Policy
-#   uri:
-#     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_sf_app_id }}/signOnPolicyAssignments'
-#     method: POST
-#     headers:
-#       content-type: 'application/json'
-#       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-#     body: >
-#       {
-#         "priority": 1,
-#         "signOnPolicy": {
-#           "id": "{{ pingid_auth_pol_id }}"
-#         }
-#       }
-#     body_format: json
-#     status_code: 201
-#   when: '1 not in sf_auth_pol_id'
-
 - name: WF Create Demo Multi Factor App
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
@@ -288,3 +208,190 @@
     body_format: json
     status_code: 201
   when: '"demo_mfa_cont_app" not in app_list'
+
+- name: WF App Get Applications (Again)
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: app_info_recheck
+  retries: 2
+
+- name: WF Demo Filter App List
+  set_fact:
+    demo_sf_app_id: "{{ app_info_recheck.json._embedded.applications |
+                      selectattr('spEntityId', 'defined') |
+                      selectattr('spEntityId', 'match', 'demo_sf_app') |
+                      map(attribute='id') | list | first }}"
+    demo_mfa_app_id: "{{ app_info_recheck.json._embedded.applications |
+                      selectattr('spEntityId', 'defined') |
+                      selectattr('spEntityId', 'match', 'demo_mfa_app') |
+                      map(attribute='id') | list | first }}"
+    demo_mfa_cidr_app_id: "{{ app_info_recheck.json._embedded.applications |
+                      selectattr('spEntityId', 'defined') |
+                      selectattr('spEntityId', 'match', 'demo_mfa_cidr_app') |
+                      map(attribute='id') | list | first }}"
+    demo_mfa_cont_app_id: "{{ app_info_recheck.json._embedded.applications |
+                      selectattr('spEntityId', 'defined') |
+                      selectattr('spEntityId', 'match', 'demo_mfa_cont_app') |
+                      map(attribute='id') | list | first }}"
+
+- name: WF Demo Get List of Authorization Policies
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/signOnPolicies'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+    validate_certs: true
+  register: policy_check
+  retries: 2
+
+- name: WF Demo MFA Filter Authorization Policy ID
+  set_fact:
+    sf_auth_pol_id: "{{ policy_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Single_Factor') |
+                    map(attribute='id') | list | first }}"
+    mfa_auth_pol_id: "{{ policy_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Multi_Factor') |
+                    map(attribute='id') | list | first }}"
+    demo_cidr_auth_pol_id: "{{ policy_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_CIDR_With_Self-Service_Password_Reset') |
+                    map(attribute='id') | list | first }}"
+    demo_contractor_auth_pol_id: "{{ policy_check.json._embedded.signOnPolicies |
+                    selectattr('name', 'match', 'Demo_MFA_Contractors_Only') |
+                    map(attribute='id') | list | first }}"
+
+- name: WF Demo SF App Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_sf_app_id }}/signOnPolicyAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: sf_app_sop_info
+  retries: 2
+
+- name: WF Demo SF App Check if SOP Exists
+  set_fact:
+    check_sf_sop: "{{ sf_app_sop_info.json._embedded.signOnPolicyAssignments |
+                map(attribute='priority') | list }}"
+
+- name: WF Create Demo SF App SOP
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_sf_app_id }}/signOnPolicyAssignments'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "signOnPolicy": {
+          "id": "{{ sf_auth_pol_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  when: '1 not in check_sf_sop'
+
+- name: WF Demo MFA App Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_mfa_app_id }}/signOnPolicyAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: mfa_app_sop_info
+  retries: 2
+
+- name: WF Demo SF App Check if SOP Exists
+  set_fact:
+    check_mfa_sop: "{{ mfa_app_sop_info.json._embedded.signOnPolicyAssignments |
+                map(attribute='priority') | list }}"
+
+- name: WF Create Demo MFA App SOP
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_mfa_app_id }}/signOnPolicyAssignments'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "signOnPolicy": {
+          "id": "{{ mfa_auth_pol_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  when: '1 not in check_mfa_sop'
+
+- name: WF Demo CIDR App Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_mfa_cidr_app_id }}/signOnPolicyAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: mfa_app_sop_info
+  retries: 2
+
+- name: WF Demo CIDR App Check if SOP Exists
+  set_fact:
+    check_cidr_sop: "{{ mfa_app_sop_info.json._embedded.signOnPolicyAssignments |
+                map(attribute='priority') | list }}"
+
+- name: WF Create Demo CIDR App SOP
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_mfa_cidr_app_id }}/signOnPolicyAssignments'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "signOnPolicy": {
+          "id": "{{ demo_cidr_auth_pol_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  when: '1 not in check_cidr_sop'
+
+- name: WF Demo MFA Contractor App Info
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_mfa_cont_app_id }}/signOnPolicyAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: cont_mfa_app_sop_info
+  retries: 2
+
+- name: WF Demo MFA Contractor App Check if SOP Exists
+  set_fact:
+    check_cont_mfa_sop: "{{ cont_mfa_app_sop_info.json._embedded.signOnPolicyAssignments |
+                map(attribute='priority') | list }}"
+
+- name: WF Create Demo MFA Contractor App SOP
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/applications/{{ demo_mfa_cont_app_id }}/signOnPolicyAssignments'
+    method: POST
+    headers:
+      content-type: 'application/json'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "priority": 1,
+        "signOnPolicy": {
+          "id": "{{ demo_contractor_auth_pol_id }}"
+        }
+      }
+    body_format: json
+    status_code: 201
+  when: '1 not in check_cont_mfa_sop'
