@@ -65,14 +65,14 @@
                     map(attribute='id') |
                     list | first }}"
   when: >
-    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_FED-DEMO_Gateway" not in gateway_list' and
     '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway ID (New)
   set_fact:
     gateway_id: "{{ gw_create.json.id }}"
   when: >
-    '"PING_FED-DEMO_Gateway" not in p1_gateway_list' and
+    '"PING_FED-DEMO_Gateway" in p1_gateway_list' and
     '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Credential Check (Existing only)
@@ -85,7 +85,7 @@
   register: credential_get
   retries: 2
   when: >
-    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_FED-DEMO_Gateway" not in gateway_list' and
     '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Credential List (Existing only)
@@ -95,7 +95,7 @@
                       map(attribute='id') |
                       list }}"
   when: >
-    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_FED-DEMO_Gateway" not in gateway_list' and
     '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Credential Delete (Existing only)
@@ -108,7 +108,7 @@
   retries: 2
   loop: "{{ credential_list }}"
   when: >
-    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_FED-DEMO_Gateway" not in gateway_list' and
     '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Credential Create
