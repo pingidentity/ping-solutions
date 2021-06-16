@@ -27,7 +27,6 @@
     status_code: 200
   register: gateway_get
   retries: 2
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway List
   set_fact:
