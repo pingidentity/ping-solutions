@@ -71,7 +71,6 @@
 - name: PF Gateway ID (New)
   set_fact:
     gateway_id: "{{ gw_create.json.id }}"
-    gw_cred_ct: "0"
   when: >
     '"PING_FED-DEMO_Gateway" not in p1_gateway_list' and
     '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
@@ -129,7 +128,6 @@
     gateway_cred: "{{ gw_cred_response.json.credential }}"
   when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
-
 - name: PF Gateway Environment Roles Check
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/roles'
@@ -139,6 +137,16 @@
     status_code: 200
   register: role_get
   retries: 2
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+
+#use | to use multiple match values
+- name: PF Gateway List Roles
+  set_fact:
+    p1_role_list: "{{ role_get.json._embedded.roles |
+                      selectattr('name', 'match', 'Environment Admin|Identity Data Admin') |
+                      map(attribute='id') |
+                      list }}"
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Roles Check
   uri:
@@ -149,19 +157,14 @@
     status_code: 200
   register: gw_role_get
   retries: 2
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway List Gateway Roles
   set_fact:
     gw_role_list: "{{ gw_role_get.json._embedded.roleAssignments |
                   map(attribute='role.id') |
                   list }}"
-
-- name: PF Gateway List Roles
-  set_fact:
-    p1_role_list: "{{ role_get.json._embedded.roles |
-                      selectattr('name', 'match', 'Environment Admin|Identity Data Admin') |
-                      map(attribute='id') |
-                      list }}"
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Role Add
   uri:
@@ -184,7 +187,9 @@
     body_format: json
   loop: "{{ p1_role_list }}"
   retries: 2
-  when: item not in gw_role_list
+  when: >
+    item not in gw_role_list and
+    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Create In PF
   uri:
