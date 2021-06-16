@@ -1,3 +1,22 @@
+- name: PF Gateway Connection Check
+  uri:
+    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/pingOneConnections'
+    user: '{{ PF_USERNAME }}'
+    password: '{{ PF_PASSWORD }}'
+    method: GET
+    headers:
+      X-Xsrf-Header: 'PingFederate'
+    status_code: 200
+    validate_certs: no
+  register: gateway_check
+  retries: 2
+
+- name: PF Gateway Connection List
+  set_fact:
+    pf_gateway_list: "{{ gateway_check.json['items'] |
+                    map(attribute='name') |
+                    list }}"
+
 - name: PF Gateway Check
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways'
@@ -8,13 +27,14 @@
     status_code: 200
   register: gateway_get
   retries: 2
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
-#again json['items'] due to protected value
 - name: PF Gateway List
   set_fact:
-    gateway_list: "{{ gateway_get.json._embedded.gateways |
+    p1_gateway_list: "{{ gateway_get.json._embedded.gateways |
                     map(attribute='name') |
-                    list }}"  
+                    list }}"
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Create
   uri:
@@ -34,7 +54,9 @@
     status_code: 201
   register: gw_create
   retries: 2
-  when: '"PING_FED-DEMO_Gateway" not in gateway_list'
+  when: >
+    '"PING_FED-DEMO_Gateway" not in p1_gateway_list' and
+    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway ID (Existing)
   set_fact:
@@ -42,13 +64,53 @@
                     selectattr('name', 'match', 'PING_FED-DEMO_Gateway') |
                     map(attribute='id') |
                     list | first }}"
-  when: '"PING_FED-DEMO_Gateway" in gateway_list'
+  when: >
+    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway ID (New)
   set_fact:
     gateway_id: "{{ gw_create.json.id }}"
     gw_cred_ct: "0"
-  when: '"PING_FED-DEMO_Gateway" not in gateway_list'
+  when: >
+    '"PING_FED-DEMO_Gateway" not in p1_gateway_list' and
+    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+
+- name: PF Gateway Credential Check (Existing only)
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways/{{ gateway_id }}/credentials'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: credential_get
+  retries: 2
+  when: >
+    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+
+- name: PF Gateway Credential List (Existing only)
+  set_fact:
+    credential_list: "{{ credential_get.json._embedded.credentials |
+                      selectattr('lastUsedAt', 'undefined' ) |
+                      map(attribute='id') |
+                      list }}"
+  when: >
+    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
+
+- name: PF Gateway Credential Delete (Existing only)
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways/{{ gateway_id }}/credentials/{{item}}'
+    method: DELETE
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 204
+  retries: 2
+  loop: "{{ credential_list }}"
+  when: >
+    '"PING_FED-DEMO_Gateway" in gateway_list' and
+    '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Credential Create
   uri:
@@ -60,29 +122,69 @@
     status_code: 201
   register: gw_cred_response
   retries: 2
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
 - name: PF Gateway Cred Value
   set_fact:
     gateway_cred: "{{ gw_cred_response.json.credential }}"
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
 
-- name: PF Gateway Connection Check
+
+- name: PF Gateway Environment Roles Check
   uri:
-    url: '{{ PINGFED_BASE_URL }}/pf-admin-api/v1/pingOneConnections'
-    user: '{{ PF_USERNAME }}'
-    password: '{{ PF_PASSWORD }}'
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/roles'
     method: GET
     headers:
-      X-Xsrf-Header: 'PingFederate'
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
-    validate_certs: no      
-  register: gateway_check
+  register: role_get
   retries: 2
 
-- name: PF Gateway Connection List
+- name: PF Gateway Roles Check
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways/{{ gateway_id }}/roleAssignments'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: gw_role_get
+  retries: 2
+
+- name: PF Gateway List Gateway Roles
   set_fact:
-    gateway_list: "{{ gateway_check.json['items'] |
-                    map(attribute='name') |
-                    list }}"
+    gw_role_list: "{{ gw_role_get.json._embedded.roleAssignments |
+                  map(attribute='role.id') |
+                  list }}"
+
+- name: PF Gateway List Roles
+  set_fact:
+    p1_role_list: "{{ role_get.json._embedded.roles |
+                      selectattr('name', 'match', 'Environment Admin|Identity Data Admin') |
+                      map(attribute='id') |
+                      list }}"
+
+- name: PF Gateway Role Add
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/gateways/{{ gateway_id }}/roleAssignments'
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    body: >
+      {
+        "role": {
+          "id": "{{ item }}"
+        },
+        "scope": {
+          "id": "{{ ENV_ID }}",
+          "type": "ENVIRONMENT"
+        }
+      }
+    status_code: 201
+    body_format: json
+  loop: "{{ p1_role_list }}"
+  retries: 2
+  when: item not in gw_role_list
 
 - name: PF Gateway Create In PF
   uri:
@@ -104,4 +206,4 @@
     validate_certs: no
   register: pf_gw_create
   retries: 2
-  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in gateway_list'
+  when: '"PING_ONE_to_PING_FED_DEMO_Gateway" not in pf_gateway_list'
