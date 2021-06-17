@@ -254,7 +254,7 @@
 - name: PF External IdP Get Server info
   set_fact:
     pf_ent_id: "{{ server_info_list.json.federationInfo.saml2EntityId }}"
-    pf_base_url: "{{ server_info_list.json.federationInfo.baseUrl + '/idp/startSSO.ping?PartnerSpId=https%3A%2F%2Fhttpbin.org' }}"
+    pf_base_url: "{{ server_info_list.json.federationInfo.baseUrl + '/idp/startSSO.ping?PartnerSpId=https%3A%2F%2Fdecoder.pingidentity.cloud%2Fsaml' }}"
 
 - name: PF External IdP Get Certificates
   uri:
