@@ -1,14 +1,5 @@
 #!/bin/sh
 
-#download our repo into the container
-#wget https://github.com/pingidentity/ping-solutions/archive/refs/heads/ansible.zip -O /ansible/playbooks/ansible.zip
-echo "Pipeline branch used is $PIPELINE_BRANCH"
-git clone --depth 1 -b$PIPELINE_BRANCH https://github.com/pingidentity/ping-solutions.git /ansible/playbooks/
-
-#extract zip
-#unzip /ansible/playbooks/ansible.zip -d /ansible/playbooks/
-
-
 #echo for pipeline
 echo '{' > ./vars.txt
 if [[ -n "$API_LOCATION" ]]; then
@@ -87,4 +78,4 @@ echo '}' >> ./vars.txt
 echo "Variable values:"
 cat ./vars.txt
 #run the playbook
-ansible-playbook --extra-vars @vars.txt /ansible/playbooks/.gitlab-ci/$PLAYBOOK -vvv
+ansible-playbook --extra-vars @vars.txt /builds/solutions/thunder/.gitlab-ci/$PLAYBOOK -vvv
