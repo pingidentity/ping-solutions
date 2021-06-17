@@ -30,7 +30,7 @@ variables:
 
 create-pipeline-environments:
   stage: 00-get-ready-to-rumble
-  image: pdsolutions/ansible_pipeline:0.2.8
+  image: pdsolutions/ansible_pipeline:0.3
   script: "export PLAYBOOK='00-environment-create.yml'; /ansible/entrypoint.sh"
   artifacts:
     expire_in: 4 hours
@@ -99,7 +99,7 @@ configure-WF-pf_post-environment:
 
 delete-pipeline-environments:
   stage: 05-back-to-earth
-  image: pdsolutions/ansible_pipeline:0.2.8
+  image: pdsolutions/ansible_pipeline:0.3
   script: "export WORKER_APP_ACCESS_TOKEN=$PIPELINE_APP_ACCESS_TOKEN; export PLAYBOOK='04-environment-delete.yml'; /ansible/entrypoint.sh"
   dependencies:
     - create-pipeline-environments

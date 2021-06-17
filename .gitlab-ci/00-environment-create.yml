@@ -6,9 +6,8 @@
   tasks:
   #make the CIAM Environment
   - name: CIAM Environment Creation
-    include: /ansible/playbooks/.gitlab-ci/ansible-pipeline/00-ciam-env-create.yml
-  
+    include: /builds/solutions/thunder/.gitlab-ci/ansible-pipeline/00-ciam-env-create.yml
+
   #make the WF Environment
   - name: WF Environment Creation
-    include: /ansible/playbooks/.gitlab-ci/ansible-pipeline/00-wf-env-create.yml
-  
+    include: /builds/solutions/thunder/.gitlab-ci/ansible-pipeline/00-wf-env-create.yml
