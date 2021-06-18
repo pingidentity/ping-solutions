@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#echo for pipeline
+#echo for pipeline. Builds json to load variables to use within ansible-playbook command. Takes Git variables from environment and passes to file to build dynamically.
 echo '{' > ./vars.txt
 if [[ -n "$API_LOCATION" ]]; then
     echo "\"API_LOCATION\":\"$API_LOCATION\"," >> ./vars.txt
@@ -72,10 +72,11 @@ fi
 if [[ -n "$RUNNER_USER_TEST_PASSWORD" ]]; then
     echo "\"RUNNER_USER_TEST_PASSWORD\":\"$RUNNER_USER_TEST_PASSWORD\"," >> ./vars.txt
 fi
+#fake is to close the json out properly as there is no guarantee which will be the last value and there must not be a finishing comma. Easier than SED!!!
 echo '"fake":"fake"' >> ./vars.txt
 echo '}' >> ./vars.txt
 
 echo "Variable values:"
 cat ./vars.txt
-#run the playbook
+#run the playbook specified in the relevant git stage. See .gitlab-ci.yml for relevant stages.
 ansible-playbook --extra-vars @vars.txt /builds/solutions/thunder/.gitlab-ci/$PLAYBOOK -vvv

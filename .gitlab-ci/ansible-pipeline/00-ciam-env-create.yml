@@ -28,7 +28,7 @@
   retries: 2
 
 - name: CIAM Get Environment Information
-  set_fact: 
+  set_fact:
     org_id: "{{ env_info.json.organization.id }}"
 
 - name: CIAM Get License Info
@@ -39,7 +39,7 @@
       Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
     status_code: 200
   register: lic_info
-  retries: 2  
+  retries: 2
 
 - name: CIAM Get License Information
   set_fact:
@@ -83,7 +83,7 @@
                   "allowProduction":false
                 },
                 "changeNotificationMessages":[
-                
+
                 ],
                 "errors":{
                   "name":""
@@ -120,6 +120,10 @@
   register: env_add
   retries: 2
 
+- name: CIAM Dogfish Paws
+  pause:
+    seconds: 5
+
 - name: CIAM Get Environment IDs
   uri:
     url: '{{ API_LOCATION }}/environments'
@@ -127,12 +131,12 @@
     headers:
       Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
     status_code: 200
-  register: env_list    
-  retries: 2  
+  register: env_list
+  retries: 2
 
 - name: CIAM Save Values From New Environment
   set_fact:
-      CIAM_ENV_ID: "{{ env_list.json._embedded.environments | 
+      CIAM_ENV_ID: "{{ env_list.json._embedded.environments |
                     selectattr('name','match', env_name ) |
                     map(attribute='id') | list | first }}"
 
@@ -204,7 +208,7 @@
 #    headers:
 #      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
 #    status_code: 200
-#  register: user_list    
+#  register: user_list
 #  retries: 2
 #
 #- name: CIAM Filter User List for Antonik
@@ -244,7 +248,7 @@
 #    body_format: json
 #    status_code: 204
 #  register: user_add_mfa
-#  retries: 2  
+#  retries: 2
 #
 #- name: CIAM GET SMS Token
 #  uri:
