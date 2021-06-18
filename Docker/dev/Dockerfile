@@ -1,15 +1,16 @@
-FROM alpine:3.7
+#initially pdsolutions/ansible_dev
+FROM alpine:3.14
 
 ENV BUILD_PACKAGES \
   git \
-  python \
-  py-boto \
-  py-dateutil \
-  py-httplib2 \
-  py-jinja2 \
-  py-paramiko \
-  py-pip \
-  py-yaml \
+  python3 \
+  py3-pip \
+  py3-boto \
+  py3-dateutil \
+  py3-httplib2 \
+  py3-jinja2 \
+  py3-paramiko \
+  py3-yaml \
   ca-certificates
 
 # If installing ansible@testing
@@ -24,8 +25,7 @@ RUN set -x && \
       musl-dev \
       libffi-dev \
       openssl-dev \
-      git \
-      python-dev && \
+      git && \
     \
     echo "==> Upgrading apk and system..."  && \
     apk update && apk upgrade && \
@@ -33,7 +33,6 @@ RUN set -x && \
     echo "==> Adding Python runtime..."  && \
     apk add --no-cache ${BUILD_PACKAGES} && \
     pip install --upgrade pip && \
-    pip install python-keyczar docker-py && \
     \
     echo "==> Installing Ansible..."  && \
     pip install ansible && \
@@ -65,7 +64,6 @@ USER ${UID}:${GID}
 
 COPY ./resources/entrypoint.sh /ansible/entrypoint.sh
 
-ENV ANSIBLE_RETRY_FILES_ENABLED false
 ENV PYTHONPATH /ansible/lib
 ENV PATH /ansible/bin:$PATH
 ENV ANSIBLE_LIBRARY /ansible/library

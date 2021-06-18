@@ -30,7 +30,7 @@ variables:
 
 create-pipeline-environments:
   stage: 00-get-ready-to-rumble
-  image: pdsolutions/ansible_pipeline:0.3
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$ANSIBLE_DOCKER_PIPELINE_VERSION
   script: "export PLAYBOOK='00-environment-create.yml'; /ansible/entrypoint.sh"
   artifacts:
     expire_in: 4 hours
@@ -43,28 +43,28 @@ create-pipeline-environments:
 
 configure-CIAM-p1_pf_pre-environment:
   stage: 01-to-the-moon
-  image: pdsolutions/ansible_dev:0.2
+  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
   script: ./.gitlab-ci/ansible-pipeline/01-ciam-configure.sh
   dependencies:
     - create-pipeline-environments
 
 configure-WF-p1_pf_pre-environment:
   stage: 01-to-the-moon
-  image: pdsolutions/ansible_dev:0.2
+  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
   script: ./.gitlab-ci/ansible-pipeline/01-wf-configure.sh
   dependencies:
     - create-pipeline-environments
 
 configure-CIAM-pf_post-environment:
   stage: 02-almost-to-the-moon
-  image: pdsolutions/ansible_dev:0.2
+  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
   script: ./.gitlab-ci/ansible-pipeline/02-ciam-configure.sh
   dependencies:
     - create-pipeline-environments
 
 configure-WF-pf_post-environment:
   stage: 02-almost-to-the-moon
-  image: pdsolutions/ansible_dev:0.2
+  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
   script: ./.gitlab-ci/ansible-pipeline/02-wf-configure.sh
   dependencies:
     - create-pipeline-environments
@@ -99,7 +99,7 @@ configure-WF-pf_post-environment:
 
 delete-pipeline-environments:
   stage: 05-back-to-earth
-  image: pdsolutions/ansible_pipeline:0.3
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$ANSIBLE_DOCKER_PIPELINE_VERSION
   script: "export WORKER_APP_ACCESS_TOKEN=$PIPELINE_APP_ACCESS_TOKEN; export PLAYBOOK='04-environment-delete.yml'; /ansible/entrypoint.sh"
   dependencies:
     - create-pipeline-environments

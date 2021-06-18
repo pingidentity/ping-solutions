@@ -29,7 +29,7 @@
   retries: 2
 
 - name: WF Get Environment Information
-  set_fact: 
+  set_fact:
     org_id: "{{ env_info.json.organization.id }}"
 
 - name: WF Get License Info
@@ -40,7 +40,7 @@
       Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
     status_code: 200
   register: lic_info
-  retries: 2  
+  retries: 2
 
 - name: WF Get License Information
   set_fact:
@@ -105,7 +105,7 @@
                   "allowProduction":false
                 },
                 "changeNotificationMessages":[
-                
+
                 ],
                 "errors":{
                   "name":""
@@ -146,6 +146,10 @@
   register: env_add
   retries: 2
 
+- name: WF Dogfish Paws
+  pause:
+    seconds: 5
+
 - name: WF Get Environment IDs
   uri:
     url: '{{ API_LOCATION }}/environments'
@@ -153,12 +157,12 @@
     headers:
       Authorization: 'Bearer {{ PIPELINE_APP_ACCESS_TOKEN }}'
     status_code: 200
-  register: env_list    
-  retries: 2  
+  register: env_list
+  retries: 2
 
 - name: WF Save Values From New Environment
   set_fact:
-      WF_ENV_ID: "{{ env_list.json._embedded.environments | 
+      WF_ENV_ID: "{{ env_list.json._embedded.environments |
                     selectattr('name','match', env_name ) |
                     map(attribute='id') | list | first }}"
 
@@ -234,13 +238,13 @@
     - '  "defaultCommandTimeout": 30000,'
     - '  "chromeWebSecurity": false,'
     - '  "env": {'
-    - '    "baseUrl": "https://console-staging.pingone.com/?env={{ ADMIN_ENV_ID }}",'    
+    - '    "baseUrl": "https://console-staging.pingone.com/?env={{ ADMIN_ENV_ID }}",'
     - '    "ENV_ID": "{{ CIAM_ENV_ID }}",'
     - '    "ENV_NM": "{{ env_name }}",'
     - '    "CONSOLE_USERNAME": "{{ CONSOLE_USERNAME }}",'
     - '    "CONSOLE_PASSWORD": "{{ CONSOLE_PASSWORD }}"'
     - '    }'
-    - '}'  
+    - '}'
 
 - name: WF Wait for PingID Deployment to be DEPLOYED
   uri:
