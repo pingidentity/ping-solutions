@@ -174,7 +174,7 @@
         "ssoServiceEndpoints": [
           {
             "binding": "POST",
-            "url": "https://httpbin.org/anything",
+            "url": "https://decoder.pingidentity.cloud/saml",
             "isDefault": true,
             "index": 0
           }
@@ -254,7 +254,7 @@
 - name: PF External IdP Get Server info
   set_fact:
     pf_ent_id: "{{ server_info_list.json.federationInfo.saml2EntityId }}"
-    pf_base_url: "{{ server_info_list.json.federationInfo.baseUrl + '/idp/startSSO.ping?PartnerSpId=https%3A%2F%2Fdecoder.pingidentity.cloud%2Fsaml' }}"
+    pf_base_url: "{{ server_info_list.json.federationInfo.baseUrl + '/idp/SSO.saml2' }}"
 
 - name: PF External IdP Get Certificates
   uri:
