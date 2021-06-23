@@ -1,0 +1,1377 @@
+# Get the List of all data stores currently in PingFederate  
+- name: PF P1 Authentication Check if Data store exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: check_ds
+  retries: 2
+
+# List of all data stores by name
+- name: PF P1 Authentication List all Data stores
+  set_fact:
+    LIST_DS: "{{check_ds.json['items'] | map(attribute='name') | list}}"
+
+# Create LDAP data store if  Demo LDAP data store not retruned by LIST_DS
+- name: PF P1 Authentication Create LDAP DataStore
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+        "type": "LDAP",
+        "name": "Demo LDAP Data Store",
+        "useSsl":true,
+        "hostnames" : ["0.0.0.0"],
+        "userDN": "example_ldap_username",
+        "password": "example_ldap_password"
+        }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_ds
+  retries: 2
+  when: '"Demo LDAP Data Store" not in LIST_DS or LIST_DS is not defined'
+
+# Get LDAP DataStore ID and name from create_ds task
+- name: PF P1 Authentication Get the LDAP Data Store ID and name from the created DataStore
+  set_fact:
+    DS_ID: "{{ create_ds.json.id}}"
+    DS_NAME: "{{ create_ds.json.name}}"
+  when: '"Demo LDAP Data Store" not in LIST_DS or LIST_DS is not defined'
+
+# Get LDAP DataStore ID and name from the list returned during the check_ds
+- name: PF P1 Authentication Get the LDAP Data Store ID and name from the Data store list returned
+  set_fact:
+    DS_ID: "{{ check_ds.json['items'] | selectattr('name','match','Demo LDAP Data Store') | map(attribute='id') | list | first }}"
+    DS_NAME: "{{ check_ds.json['items'] | selectattr('name','match','Demo LDAP Data Store') | map(attribute='name') | list | first }}"
+  when: '"Demo LDAP Data Store" in LIST_DS'
+
+# Get the List of all PCV's currently in PingFederate  
+- name: PF P1 Authentication Check if LDAP password credential validator with the same name exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: check_pcv
+  retries: 2
+
+# List of all PCV's by name
+- name: PF P1 Authentication List all Password credential validators
+  set_fact:
+    LIST_PCV: "{{check_pcv.json['items'] | map(attribute='name') | list}}"
+
+#Create LDAP PCV if the DemoPCV not returned by LIST_PCV
+- name: PF P1 Authentication Create LDAP PCV
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+          "id": "DemoID",
+          "name": "DemoPCV",
+          "pluginDescriptorRef": {
+              "id": "org.sourceid.saml20.domain.LDAPUsernamePasswordCredentialValidator",
+              "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators/descriptors/org.sourceid.saml20.domain.LDAPUsernamePasswordCredentialValidator"
+          },
+          "configuration": {
+              "fields": [
+              {
+                  "name": "LDAP Datastore",
+                  "value": "{{DS_ID}}"
+              },
+              {
+                  "name": "Search Base",
+                  "value": "dc=example,dc=com"
+              },
+              {
+                  "name": "Search Filter",
+                  "value": "sAMAccountName=${username}"
+              }
+              ]
+          }
+          }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_pcv
+  retries: 2
+  when: '"DemoPCV" not in LIST_PCV or LIST_PCV is not defined'
+
+# Get LDAP PCV_ID and name from  create_pcv task
+- name: PF P1 Authentication Get the LDAP PCV ID and name from the created Password credential Validator
+  set_fact:
+    PCV_ID: "{{ create_pcv.json.id }}"
+    PCV_NAME: "{{ create_pcv.json.name}}"
+  when: '"DemoPCV" not in LIST_PCV or LIST_PCV is not defined'
+
+# Get LDAP PCV_ID and name from the list returned during the check_pcv
+- name: PF P1 Authentication Get the LDAP PCV ID and name from the returned list
+  set_fact:
+    PCV_ID: "{{ check_pcv.json['items'] | selectattr('name','match','DemoPCV') | map(attribute='id') | list | first }}"
+    PCV_NAME: "{{ check_pcv.json['items'] | selectattr('name','match','DemoPCV') | map(attribute='name') | list | first }}"
+  when: '"DemoPCV" in LIST_PCV'
+  
+# Get the List of all Notification Publisher currently in PingFederate
+- name: PF P1 Authentication Check if Notification Publisher with the same name exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/notificationPublishers'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: check_np
+  retries: 2
+
+# List all NP's by name
+- name: PF P1 Authentication List all Notification Publisher
+  set_fact:
+    LIST_NP: "{{check_np.json['items'] | map(attribute='name') | list}}"
+
+# Create NP if DemoSMTP is not returned by LIST_NP
+- name: PF P1 Authentication Create Notification Publisher
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/notificationPublishers'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+        "id": "DemoSMTP",
+        "name": "DemoSMTP",
+        "pluginDescriptorRef": {
+        "id": "com.pingidentity.email.SmtpNotificationPlugin"
+        },
+            "configuration": {
+                "fields": [
+                {
+                    "name": "From Address",
+                    "value": "noreply@any-company.org"
+                },
+                {
+                    "name": "Email Server",
+                    "value": "0.0.0.0"
+                },
+                {
+                    "name": "Test Address",
+                    "value": "testuser@gmail.com"
+                }
+                ]
+            }
+        }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_np
+  retries: 2
+  when: '"DemoSMTP" not in LIST_NP or LIST_NP is not defined'
+
+# Get NP_ID and name from create_np task
+- name: PF P1 Authentication Get the Notification Publisher ID from the created NP
+  set_fact:
+    NP_ID: "{{ create_np.json.id}}"
+    NP_NAME: "{{ create_np.json.name}}"
+  when: '"DemoSMTP" not in LIST_NP or LIST_NP is not defined'
+
+# Get NP_ID and name from check_np task
+- name: PF P1 Authentication Get the Notification Publisher ID from the returned list
+  set_fact:
+    NP_ID: "{{ check_np.json['items'] | selectattr('name','match', 'DemoSMTP') | map(attribute='id') | list | first }}"
+    NP_NAME: "{{ check_np.json['items'] | selectattr('name','match','DemoSMTP') |map(attribute='name') | list | first }}"
+  when: '"DemoSMTP" in LIST_NP'
+
+# Get the list of all adapters in PingFederate 
+- name: PF P1 Authentication Check if HTML form adapter with the same name exists
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: check_adap
+  retries: 2
+
+# List all adapters by name
+- name: PF P1 Authentication List all adapters
+  set_fact:
+    LIST_ADAPTER: "{{check_adap.json['items'] | map(attribute='name') | list}}"
+
+# Create HTML form adapter if SampleHTMLform is not retruned by LIST_ADAPTER
+- name: PF P1 Authentication 'Create HTML form adapter'
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+              "id": "HtmlformDemo",
+              "name": "SampleHtmlForm",
+              "pluginDescriptorRef": {
+                  "id": "com.pingidentity.adapters.htmlform.idp.HtmlFormIdpAuthnAdapter"
+              },
+              "configuration": {
+                  "tables": [
+                  {
+                      "name": "Credential Validators",
+                      "rows": [
+                      {
+                          "fields": [
+                          {
+                              "name": "Password Credential Validator Instance",
+                              "value": "{{PCV_ID}}"
+                          }
+                          ]
+                      }
+                      ]
+                  }
+                  ],
+                  "fields": [
+                      {
+                          "name": "Allow Password Changes",
+                          "value": "true"
+                      },
+                      {
+                          "name": "Password Reset Type",
+                          "value": "OTL"
+                      },
+                      {
+                          "name": "Notification Publisher",
+                          "value": "{{NP_ID}}"
+                      }
+                  ]
+              },
+              "attributeContract": {
+                      "coreAttributes": [
+                      {
+                          "name": "username",
+                          "masked": false,
+                          "pseudonym": true
+                      }
+                      ]
+              }
+              }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_html_adap
+  retries: 2
+  when: '"SampleHtmlForm" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
+
+# Get the HTMLform adapter id and name from create_html_adap variable
+- name: PF P1 Authentication Get the HTMLform adapter from the created adapter instance
+  set_fact:
+    HTMLFORM_ID: "{{ create_html_adap.json.id}}"
+    HTMLFORM_NAME: "{{ create_html_adap.json.name}}"
+  when: '"SampleHtmlForm" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
+
+# Get the HTMLform  adapter id and name from check_adap variable
+- name: PF P1 Authentication Get the HTMLform adapter from the returned list
+  set_fact:
+    HTMLFORM_ID: "{{ check_adap.json['items'] | selectattr('name','match','SampleHtmlForm') | map(attribute='id') | list | first }}"
+    HTMLFORM_NAME: "{{ check_adap.json['items'] | selectattr('name','match','SampleHtmlForm') | map(attribute='name') | list | first }}"
+  when: '"SampleHtmlForm" in LIST_ADAPTER'
+
+# Get the list of all CIDR selectors returned by PingFederate
+- name: PF P1 Authentication Get the list of CIDR Selectors
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationSelectors'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: check_selector
+  retries: 2
+
+# List all the selectors returned by name
+- name: PF P1 Authentication List the CIDR Selectors configured by name
+  set_fact:
+    LIST_CIDR: "{{check_selector.json['items'] | map(attribute='name') | list}}"
+
+# Create CIDR selectors if CIDRdemo is not returned by LIST_CIDR
+- name: PF P1 Authentication Create CIDR Selector
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationSelectors'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+          {
+            "id": "CIDRid",
+            "name": "CIDRdemo",
+            "pluginDescriptorRef": {
+            "id": "com.pingidentity.pf.selectors.cidr.CIDRAdapterSelector"
+            },
+            "configuration": {
+              "tables": [
+                {
+                  "name": "Networks",
+                  "rows": [
+                    {
+                      "fields": [
+                        {
+                          "name": "Network Range (CIDR notation)",
+                          "value": "0.0.0.0./0"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            } 
+          }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+    return_content: yes
+  register: create_cidr
+  retries: 2
+  when: '"CIDRdemo" not in LIST_CIDR or LIST_CIDR is not defined'
+
+# Get the CIDR_ID and name from the create_cidr variable
+- name: PF P1 Authentication Get the CIDR selector ID from the created selector instance
+  set_fact:
+    CIDR_ID: "{{ create_cidr.json.id}}"
+    CIDR_NAME: "{{ create_cidr.json.name}}"
+  when: '"CIDRdemo" not in LIST_CIDR or LIST_CIDR is not defined'
+
+# Get the CIDR_ID and name from the check_selector variable
+- name: PF P1 Authentication Get the CIDR ID and name from the returned list
+  set_fact:
+    CIDR_ID: "{{ check_selector.json['items'] | selectattr('name','match', 'CIDRdemo') | map(attribute='id') | list | first }}"
+    CIDR_NAME: "{{ check_selector.json['items'] | selectattr('name','match','CIDRdemo') | map(attribute='name') | list | first }}"
+  when: '"CIDRdemo" in LIST_CIDR'
+
+# Create Context header selectors if Demo_context_1 is not returned by LIST_CIDR
+- name: PF P1 Authentication Create Context Header Selector
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationSelectors'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+          {
+            "id": "demoContext",
+            "name": "Demo_Context",
+            "pluginDescriptorRef": {
+            "id": "com.pingidentity.pf.selectors.saml.SamlAuthnContextAdapterSelector",
+            "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationSelectors/descriptors/com.pingidentity.pf.selectors.saml.SamlAuthnContextAdapterSelector"
+            },
+            "configuration": {
+              "tables": [],
+              "fields": [
+                {
+                  "name": "Add or Update AuthN Context Attribute",
+                  "value": "true"
+                },
+                {
+                  "name": "Enable 'No Match' Result Value",
+                  "value": "false"
+                },
+                {
+                  "name": "Enable 'Not in Request' Result Value",
+                  "value": "false"
+                }
+              ]
+            },
+            "attributeContract": {
+              "extendedAttributes": [
+                {
+                  "name": "POPULATION"
+                },
+                {
+                  "name": "CIDR"
+                }
+              ]
+            }
+          }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+    return_content: yes
+  register: create_context
+  retries: 2
+  when: '"Demo_Context" not in LIST_CIDR or LIST_CIDR is not defined'
+
+# Get the CONTEXT_ID and name from the create_context variable
+- name: PF P1 Authentication Get the Context selector ID from the created selector instance
+  set_fact:
+    CONTEXT_ID: "{{ create_context.json.id}}"
+    CONTEXT_NAME: "{{ create_context.json.name}}"
+  when: '"Demo_Context" not in LIST_CIDR or LIST_CIDR is not defined'
+
+# Get the CONTEXT_ID and name from the check_selector variable
+- name: PF P1 Authentication Get the Context selector ID and name from the returned list
+  set_fact:
+    CONTEXT_ID: "{{ check_selector.json['items'] | selectattr('name','match', 'Demo_Context') | map(attribute='id') | list | first }}"
+    CONTEXT_NAME: "{{ check_selector.json['items'] | selectattr('name','match','Demo_Context') |map(attribute='name') | list | first }}"
+  when: '"Demo_Context" in LIST_CIDR'
+
+# Get the Environment Information from PingOne
+- name: PF P1 Authentication Get the Enviroment information
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: env_info
+  retries: 2
+
+# Get the ORG_ID from the Environment details
+- name: PF P1 Authentication Get the ORG_ID
+  set_fact: 
+    ORG_ID: "{{ env_info.json.organization.id }}"
+
+# Get the deployment list from PingOne
+- name: PF P1 Authentication Get the Deployment list
+  uri:
+    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments'
+    method: GET
+    headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        content-type: text/plain
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: deployment_id
+  retries: 2
+
+# Get the PingID deployment ID from the list
+- name: PF P1 Authentication Get the PingID deployment ID
+  set_fact:
+    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | 
+                  selectattr('status','match', 'DEPLOYED') | 
+                  selectattr('productType','match', 'PING_ID') |
+                  selectattr('assignedEnvironment.id', 'match', ENV_ID) |
+                  map(attribute='id') | list | first }}"
+
+# Get the PingID properties file form PingOne
+- name: PF P1 Authentication Get the PingId properties file
+  uri:
+    url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEPLOY_ID}}/pingIdSettings'
+    method: GET
+    headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        content-type: text/plain
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: pingid_properties
+  retries: 2
+  
+# Base64 envode the values of PingId properties file for uploading into Ping Federate
+- name: PF P1 Authentication Base64 encode the Values in PingID properties file
+  set_fact:
+    PINGID_PROP: "{{pingid_properties.content | b64encode}}"
+- name: PF P1 Authentication Create PingID adapter
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+          "id": "PingIDdemo",
+          "name": "SamplePingID",
+          "pluginDescriptorRef": {
+            "id": "com.pingidentity.adapters.pingid.PingIDAdapter"
+          },
+          "configuration": {
+          "tables": [],
+          "fields": [
+              {
+                "name": "PingID Properties",
+                "value": "{{PINGID_PROP}}"           
+              }
+            ]
+          },
+          "attributeContract": {
+            "coreAttributes": [
+              {
+                "name": "subject",
+                "masked": false,
+                "pseudonym": true
+              }         
+            ]       
+          }
+        }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+    return_content: yes
+  register: create_pingid_adap
+  retries: 2
+  when: '"SamplePingID" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
+
+# Get the PingID adapter and name from create_pingid_adap variable
+- name: PF P1 Authentication Get the PingID adapter from the created adapter instance
+  set_fact:
+    PINGID_ID: "{{ create_pingid_adap.json.id}}"
+    PINGID_NAME: "{{ create_pingid_adap.json.name}}"
+  when: '"SamplePingID" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
+
+# Get the PingID adapter and name from check_adap variable
+- name: PF P1 Authentication Get the PingID adapter from the returned list
+  set_fact:
+    PINGID_ID: "{{ check_adap.json['items'] | selectattr('name','match', 'SamplePingID') | map(attribute='id') | list | first }}"
+    PINGID_NAME: "{{ check_adap.json['items'] | selectattr('name','match','SamplePingID') |map(attribute='name') | list | first }}"
+  when: '"SamplePingID" in LIST_ADAPTER'
+
+# List the PingOne Connection ID from PF
+- name: PF P1 Authentication List the PingOne Connections
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/pingOneConnections'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+    body_format: json
+    status_code: 200
+    return_content: yes
+    validate_certs: no
+  register: p1_con
+  retries: 2
+
+# Get the PingOne Gateway connection ID from the list
+- name: PF P1 Authentication Get the PingOne gateway connection ID 
+  set_fact:
+    P1_CON_ID: "{{ p1_con.json['items'] | selectattr('name','match','PING_ONE_to_PING_FED_DEMO_Gateway') | map(attribute='id') | list | first }}"
+
+# Create P1 data store if  PingOne_DS not retruned by LIST_DS
+- name: PF P1 Authentication Create PingOne DataStore
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+              "type": "CUSTOM",
+              "name": "PingOne_DS",
+              "pluginDescriptorRef": {
+                "id": "com.pingidentity.plugins.datastore.p14c.PingOneForCustomersDataStore",
+                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores/descriptors/com.pingidentity.plugins.datastore.p14c.PingOneForCustomersDataStore"
+              },
+              "configuration": {
+                "tables": [
+                  {
+                    "name": "Custom Attributes Details",
+                    "rows": [
+                      {
+                        "fields": [
+                          {
+                            "name": "Local Attribute",
+                            "value": "popu.id"
+                          },
+                          {
+                            "name": "PingOne for Customers Attribute",
+                            "value": "/population/id"
+                          }
+                        ],
+                        "defaultRow": false
+                      }
+                    ]
+                  }
+                ],
+                "fields": [
+                  {
+                    "name": "PingOne Environment",
+                    "value": "{{P1_CON_ID}}|{{ENV_ID}}"
+                  }
+                ]
+              },
+              "maskAttributeValues": false
+            }
+          ]
+        }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_p1_ds
+  retries: 2
+  when: '"PingOne_DS" not in LIST_DS or LIST_DS is not defined'
+
+# Get the P1 DataStore ID and name from create_p1_ds task
+- name: PF P1 Authentication Get the DataStore ID and name from the created instance
+  set_fact:
+    P1_DS_ID: "{{ create_p1_ds.json.id}}"
+    P1_DS_NAME: "{{ create_p1_ds.json.name}}"
+  when: '"PingOne_DS" not in LIST_DS or LIST_DS is not defined'
+
+# Get P1 DataStore ID and name from the list returned during the check_ds
+- name: PF P1 Authentication Get the Data Store ID and name from the Data store list returned
+  set_fact:
+    P1_DS_ID: "{{ check_ds.json['items'] | selectattr('name','match','PingOne_DS') | map(attribute='id') | list | first }}"
+    P1_DS_NAME: "{{ check_ds.json['items'] | selectattr('name','match','PingOne_DS') | map(attribute='name') | list | first }}"
+  when: '"PingOne_DS" in LIST_DS'
+
+#Create P1 PCV if the Demo_P1_PCV not returned by LIST_PCV
+- name: PF P1 Authentication Create P1 Password credential Validator
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+              "id": "DemoP1pcv",
+              "name": "Demo_P1_PCV",
+              "pluginDescriptorRef": {
+                "id": "com.pingidentity.plugins.pcvs.p14c.PingOneForCustomersPCV",
+                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators/descriptors/com.pingidentity.plugins.pcvs.p14c.PingOneForCustomersPCV"
+              },
+              "configuration": {
+                "tables": [
+                  {
+                    "name": "Authentication Error Overrides",
+                    "rows": []
+                  }
+                ],
+                "fields": [
+                  {
+                    "name": "PingOne For Customers Datastore",
+                    "value": "{{P1_DS_ID}}"
+                  }
+                ]
+              },
+              "attributeContract": {
+                "coreAttributes": [],
+                "extendedAttributes": [
+                  {
+                    "name": "population.id"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_p1_pcv
+  retries: 2
+  when: '"Demo_P1_PCV" not in LIST_PCV or LIST_PCV is not defined'
+
+# Get P1 PCV_ID and name from  create_pcv task
+- name: PF P1 Authentication Get the P1 PCV ID and name from the created PCV instance
+  set_fact:
+    P1_PCV_ID: "{{ create_p1_pcv.json.id }}"
+    P1_PCV_NAME: "{{ create_p1_pcv.json.name}}"
+  when: '"Demo_P1_PCV" not in LIST_PCV or LIST_PCV is not defined'
+
+# Get P1 PCV_ID and name from the list returned during the check_pcv
+- name: PF P1 Authentication Get the PCV ID and name from the returned list
+  set_fact:
+    P1_PCV_ID: "{{ check_pcv.json['items'] | selectattr('name','match','Demo_P1_PCV') | map(attribute='id') | list | first }}"
+    P1_PCV_NAME: "{{ check_pcv.json['items'] | selectattr('name','match','Demo_P1_PCV') | map(attribute='name') | list | first }}"
+  when: '"Demo_P1_PCV" in LIST_PCV'
+
+# Create demohtml_p1 adapter if not retruned by LIST_ADAPTER
+- name: PF P1 Authentication 'Create Demo htmlform P1 adapter'
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: POST
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+          {
+              "id": "demohtmlp1",
+              "name": "demohtml_p1",
+              "pluginDescriptorRef": {
+                "id": "com.pingidentity.adapters.htmlform.idp.HtmlFormIdpAuthnAdapter",
+                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/descriptors/com.pingidentity.adapters.htmlform.idp.HtmlFormIdpAuthnAdapter"
+              },
+              "configuration": {
+                "tables": [
+                  {
+                    "name": "Credential Validators",
+                    "rows": [
+                      {
+                        "fields": [
+                          {
+                            "name": "Password Credential Validator Instance",
+                            "value": "{{P1_PCV_ID}}"
+                          }
+                        ],
+                        "defaultRow": false
+                      }
+                    ]
+                  }
+                ],
+                "fields": []
+              },
+              "attributeContract": {
+                "coreAttributes": [
+                  {
+                    "name": "policy.action",
+                    "masked": false,
+                    "pseudonym": false
+                  },
+                  {
+                    "name": "username",
+                    "masked": false,
+                    "pseudonym": true
+                  }
+                ],
+                "extendedAttributes": [
+                  {
+                    "name": "name.given",
+                    "masked": false,
+                    "pseudonym": false
+                  },
+                  {
+                    "name": "mobilePhone",
+                    "masked": false,
+                    "pseudonym": false
+                  },
+                  {
+                    "name": "adapterPopu.id",
+                    "masked": false,
+                    "pseudonym": false
+                  },
+                  {
+                    "name": "population.id",
+                    "masked": false,
+                    "pseudonym": false
+                  },
+                  {
+                    "name": "email",
+                    "masked": false,
+                    "pseudonym": false
+                  },
+                  {
+                    "name": "name.family",
+                    "masked": false,
+                    "pseudonym": false
+                  },
+                  {
+                    "name": "subject",
+                    "masked": false,
+                    "pseudonym": false
+                  }
+                ],
+                "maskOgnlValues": false
+              },
+              "attributeMapping": {
+                "attributeSources": [
+                  {
+                    "type": "CUSTOM",
+                    "dataStoreRef": {
+                      "id": "{{P1_DS_ID}}",
+                      "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores/{{P1_DS_ID}}"
+                    },
+                    "id": "PingOneDS",
+                    "description": "This is a PingOne DataStore",
+                    "filterFields": [
+                      {
+                        "value": "id",
+                        "name": "Attribute"
+                      },
+                      {
+                        "value": "$(id)",
+                        "name": "Value"
+                      }
+                    ]
+                  }
+                ],
+                "attributeContractFulfillment": {
+                  "mobilePhone": {
+                    "source": {
+                      "type": "ADAPTER"
+                    },
+                    "value": "mobilePhone"
+                  },
+                  "name.given": {
+                    "source": {
+                      "type": "ADAPTER"
+                    },
+                    "value": "name.given"
+                  },
+                  "policy.action": {
+                    "source": {
+                      "type": "ADAPTER"
+                    },
+                    "value": "policy.action"
+                  },
+                  "adapterPopu.id": {
+                    "source": {
+                      "type": "CUSTOM_DATA_STORE",
+                      "id": "PingOneDS"
+                    },
+                    "value": "popu.id"
+                  },
+                  "population.id": {
+                    "source": {
+                      "type": "ADAPTER"
+                    },
+                    "value": "population.id"
+                  },
+                  "email": {
+                    "source": {
+                      "type": "ADAPTER"
+                    },
+                    "value": "email"
+                  },
+                  "name.family": {
+                    "source": {
+                      "type": "ADAPTER"
+                    },
+                    "value": "name.family"
+                  },
+                  "username": {
+                    "source": {
+                      "type": "ADAPTER"
+                    },
+                    "value": "username"
+                  }
+                },
+                "issuanceCriteria": {
+                  "conditionalCriteria": []
+                }
+              }
+            }
+            ]
+          }
+    body_format: json
+    status_code: 201
+    validate_certs: no
+  register: create_p1_html
+  retries: 2
+  when: '"demohtml_p1" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
+
+# Get the demohtml_p1 id and name from create_p1_html
+- name: PF P1 Authentication Get the demohtml_P1 ID and name from created adapter instance
+  set_fact:
+    P1_HTMLFORM_ID: "{{ create_p1_html.json.id}}"
+    P1_HTMLFORM_NAME: "{{ create_p1_html.json.name}}"
+  when: '"demohtml_p1" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
+
+# Get the demohtml_p1 id and name from check_adap variable
+- name: PF P1 Authentication Get the HTMLform adapter from the returned list
+  set_fact:
+    P1_HTMLFORM_ID: "{{ check_adap.json['items'] | selectattr('name','match','demohtml_p1') | map(attribute='id') | list | first }}"
+    P1_HTMLFORM_NAME: "{{ check_adap.json['items'] | selectattr('name','match','demohtml_p1') | map(attribute='name') | list | first }}"
+  when: '"demohtml_p1" in LIST_ADAPTER'
+
+# Get the List of all Authentication Policy returned by Ping Federate
+- name: PF P1 Authentication Get the list of Authentication Policies
+  uri: 
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicies/default'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: check_authn_policy
+  retries: 2
+
+# List all authentication Policy by name
+- name: PF P1 Authentication List the Policies configured by name
+  set_fact:
+    LIST_POL: "{{check_authn_policy.json['authnSelectionTrees'] | map(attribute='name') | list}}"
+
+# Get all the Populations from PingOne
+- name: PF P1 Authentication WF User Populations Get
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+  register: pop_check
+  retries: 2
+
+#  List all populations by name
+- name: PF P1 Authentication List Populations by name
+  set_fact:
+    list_pops: "{{ pop_check.json._embedded.populations | map(attribute='name') | list }}"
+
+# Get the contractors populations ID
+- name: PF P1 Authentication Get the Contractors populations ID
+  set_fact:
+    Contractors: "{{ pop_check.json._embedded.populations |
+                    selectattr('name', 'match', 'Contractors') |
+                    map(attribute='id') | list | first }}"
+  when: '"Contractors" in list_pops'
+
+# Get the Policy Contracts In Ping Federate
+- name: PF P1 Authentication Get the Policy Contracts in PF
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicyContracts'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: GET
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+    body_format: json
+    status_code: 200
+    validate_certs: no
+    return_content: yes
+  register: pol_contract
+  retries: 2
+
+# Get the Policy contract name from the list
+- name: PF P1 Authentication List Policy Contract by name
+  set_fact:
+    LIST_POL_CONTRACT: "{{pol_contract.json['items'] | map(attribute='name') | list | first }}"
+
+# Get the Policy contract ID from the list
+- name: PF P1 Authentication Get the Policy Contract ID
+  set_fact:
+    POL_CONTRACT_ID: "{{pol_contract.json['items'] | selectattr('name','match','Demo_Simple_Contract') | map(attribute='id') | list | first }}"
+  when: '"Demo_Simple_Contract" in LIST_POL_CONTRACT'
+
+# Update the Authenticatio Policy settings to Enable IDP authentication Policies checkbox settings
+- name: PF P1 Authentication Update IDP Authn Policy checkbox settings
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicies/settings'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: PUT
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+        {
+          "enableIdpAuthnSelection": "true",
+          "enableSpAuthnSelection": "false"
+        }
+    body_format: json
+    status_code: 200
+    validate_certs: no
+  register: pol_settings
+  retries: 2
+
+# Create Authentication Policy if  CIDR Demo policy not returned by PingFederate
+- name: PF P1 Authentication Create Authentication Policy
+  uri:
+    url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicies/default'
+    user: "{{PF_USERNAME}}"
+    password: "{{PF_PASSWORD}}"
+    force_basic_auth: yes
+    method: PUT
+    headers:
+      X-XSRF-Header: PASS
+      content-type: application/json
+      X-BypassExternalValidation: true
+    body: >
+          {
+            "failIfNoSelection": false,
+            "authnSelectionTrees": [
+              {
+                "rootNode": {
+                  "action": {
+                    "type": "AUTHN_SELECTOR",
+                    "authenticationSelectorRef": {
+                      "id": "{{CONTEXT_ID}}",
+                      "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationSelectors/{{CONTEXT_ID}}"
+                    }
+                  },
+                  "children": [
+                    {
+                      "action": {
+                        "type": "AUTHN_SELECTOR",
+                        "context": "CIDR",
+                        "authenticationSelectorRef": {
+                          "id": "{{CIDR_ID}}",
+                          "location": "{{PINGFED_BASE_URL}}pf-admin-api/v1/authenticationSelectors/{{CIDR_ID}}"
+                        }
+                      },
+                      "children": [
+                        {
+                          "action": {
+                            "type": "AUTHN_SOURCE",
+                            "context": "No",
+                            "authenticationSource": {
+                              "type": "IDP_ADAPTER",
+                              "sourceRef": {
+                                "id": "{{P1_HTMLFORM_ID}}",
+                                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/{{P1_HTMLFORM_ID}}"
+                              }
+                            }
+                          },
+                          "children": [
+                            {
+                              "action": {
+                                "type": "DONE",
+                                "context": "Fail"
+                              }
+                            },
+                            {
+                              "action": {
+                                "type": "AUTHN_SOURCE",
+                                "context": "Success",
+                                "authenticationSource": {
+                                  "type": "IDP_ADAPTER",
+                                  "sourceRef": {
+                                    "id": "{{PINGID_ID}}",
+                                    "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/{{PINGID_ID}}"
+                                  }
+                                },
+                                "inputUserIdMapping": {
+                                  "source": {
+                                    "type": "ADAPTER",
+                                    "id": "{{P1_HTMLFORM_ID}}"
+                                  },
+                                  "value": "username"
+                                },
+                                "userIdAuthenticated": false
+                              },
+                              "children": [
+                                {
+                                  "action": {
+                                    "type": "DONE",
+                                    "context": "Fail"
+                                  }
+                                },
+                                {
+                                  "action": {
+                                    "type": "APC_MAPPING",
+                                    "context": "Success",
+                                    "authenticationPolicyContractRef": {
+                                      "id": "{{POL_CONTRACT_ID}}",
+                                      "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicyContracts/{{POL_CONTRACT_ID}}"
+                                    },
+                                    "attributeMapping": {
+                                      "attributeSources": [],
+                                      "attributeContractFulfillment": {
+                                        "mail": {
+                                          "source": {
+                                            "type": "ADAPTER",
+                                            "id": "{{P1_HTMLFORM_ID}}"
+                                         },
+                                          "value": "email"
+                                        },
+                                        "subject": {
+                                          "source": {
+                                            "type": "ADAPTER",
+                                            "id": "{{P1_HTMLFORM_ID}}"
+                                          },
+                                          "value": "subject"
+                                        }
+                                      },
+                                      "issuanceCriteria": {
+                                        "conditionalCriteria": []
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "action": {
+                            "type": "AUTHN_SOURCE",
+                            "context": "Yes",
+                            "authenticationSource": {
+                              "type": "IDP_ADAPTER",
+                              "sourceRef": {
+                                "id": "{{P1_HTMLFORM_ID}}",
+                                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/{{P1_HTMLFORM_ID}}"
+                              }
+                            },
+                            "inputUserIdMapping": {
+                              "source": {
+                                "type": "CONTEXT"
+                              },
+                              "value": "context.RequestedUser"
+                            },
+                            "userIdAuthenticated": false
+                          },
+                          "children": [
+                            {
+                              "action": {
+                                "type": "DONE",
+                                "context": "Fail"
+                              }
+                            },
+                            {
+                              "action": {
+                                "type": "APC_MAPPING",
+                                "context": "Success",
+                                "authenticationPolicyContractRef": {
+                                  "id": "{{POL_CONTRACT_ID}}",
+                                  "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicyContracts/{{POL_CONTRACT_ID}}"
+                                },
+                                  "attributeMapping": {
+                                    "attributeSources": [],
+                                    "attributeContractFulfillment": {
+                                      "mail": {
+                                        "source": {
+                                          "type": "ADAPTER",
+                                          "id": "{{P1_HTMLFORM_ID}}"
+                                        },
+                                        "value": "email"
+                                      },
+                                      "subject": {
+                                        "source": {
+                                          "type": "ADAPTER",
+                                          "id": "{{P1_HTMLFORM_ID}}"
+                                        },
+                                        "value": "username"
+                                      }
+                                    },
+                                    "issuanceCriteria": {
+                                      "conditionalCriteria": []
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                    },
+                    {
+                      "action": {
+                        "type": "AUTHN_SOURCE",
+                        "context": "POPULATION",
+                        "authenticationSource": {
+                          "type": "IDP_ADAPTER",
+                          "sourceRef": {
+                            "id": "{{P1_HTMLFORM_ID}}",
+                            "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/{{P1_HTMLFORM_ID}}"
+                          }
+                        },
+                        "attributeRules": {
+                          "items": [
+                            {
+                              "attributeName": "adapterPopu.id",
+                              "condition": "EQUALS_CASE_INSENSITIVE",
+                              "expectedValue": "{{Contractors}}",
+                              "result": "P1_CONTRACTORS_POP_ID"
+                            }
+                          ],
+                          "fallbackToSuccess": true
+                        }
+                      },
+                      "children": [
+                        {
+                          "action": {
+                            "type": "DONE",
+                            "context": "Fail"
+                          }
+                        },
+                        {
+                          "action": {
+                            "type": "AUTHN_SOURCE",
+                            "context": "P1_CONTRACTORS_POP_ID",
+                            "authenticationSource": {
+                              "type": "IDP_ADAPTER",
+                              "sourceRef": {
+                                "id": "{{PINGID_ID}}",
+                                "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters/{{PINGID_ID}}"
+                              }
+                            },
+                            "inputUserIdMapping": {
+                              "source": {
+                                "type": "ADAPTER",
+                                "id": "{{P1_HTMLFORM_ID}}"
+                              },
+                              "value": "username"
+                            },
+                            "userIdAuthenticated": false
+                          },
+                          "children": [
+                            {
+                              "action": {
+                                "type": "DONE",
+                                "context": "Fail"
+                              }
+                            },
+                            {
+                              "action": {
+                                "type": "APC_MAPPING",
+                                "context": "Success",
+                                "authenticationPolicyContractRef": {
+                                  "id": "{{POL_CONTRACT_ID}}",
+                                  "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicyContracts/{{POL_CONTRACT_ID}}"
+                                },
+                                "attributeMapping": {
+                                  "attributeSources": [],
+                                  "attributeContractFulfillment": {
+                                    "mail": {
+                                      "source": {
+                                        "type": "ADAPTER",
+                                        "id": "{{P1_HTMLFORM_ID}}"
+                                      },
+                                      "value": "email"
+                                    },
+                                    "subject": {
+                                      "source": {
+                                        "type": "ADAPTER",
+                                        "id": "{{P1_HTMLFORM_ID}}"
+                                      },
+                                      "value": "subject"
+                                    }
+                                  },
+                                  "issuanceCriteria": {
+                                    "conditionalCriteria": []
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "action": {
+                            "type": "APC_MAPPING",
+                            "context": "Success",
+                            "authenticationPolicyContractRef": {
+                              "id": "{{POL_CONTRACT_ID}}",
+                              "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicyContracts/{{POL_CONTRACT_ID}}"
+                            },
+                            "attributeMapping": {
+                              "attributeSources": [],
+                              "attributeContractFulfillment": {
+                                "mail": {
+                                  "source": {
+                                    "type": "ADAPTER",
+                                    "id": "{{P1_HTMLFORM_ID}}"
+                                  },
+                                  "value": "email"
+                                },
+                                "subject": {
+                                  "source": {
+                                    "type": "ADAPTER",
+                                    "id": "{{P1_HTMLFORM_ID}}"
+                                  },
+                                  "value": "username"
+                                }
+                              },
+                              "issuanceCriteria": {
+                                "conditionalCriteria": []
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "name": "CIDR POPULATION policy",
+                "enabled": true
+              }
+            ],
+            "defaultAuthenticationSources": [],
+            "trackedHttpParameters": []
+          }
+    body_format: json
+    status_code: 200
+    validate_certs: no
+  register: create_authn_policy
+  retries: 2
+  when: '"CIDR POPULATION policy" not in LIST_POL or LIST_POL is not defined'

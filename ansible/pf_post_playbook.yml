@@ -25,7 +25,7 @@
   - include: ./PF/POST/pf_external_idp.yml
     when: '"PING_FEDERATE" in bom_values'
 
-  - include: ./PF/POST/pf_ssp_cidr.yml
+  - include: ./PF/POST/pingid_sspr.yml
     when: >
       "PING_ID" in bom_values and
       "PING_FEDERATE" in bom_values
@@ -34,6 +34,11 @@
     when: '"PING_FEDERATE" in bom_values'
 
   - include: ./PF/POST/mfa_auth_policy.yml
+    when: >
+      "PING_ID" in bom_values and
+      "PING_FEDERATE" in bom_values
+
+  - include: ./PF/POST/pf_p1_auth.yml
     when: >
       "PING_ID" in bom_values and
       "PING_FEDERATE" in bom_values
