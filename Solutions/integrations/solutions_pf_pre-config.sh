@@ -26,12 +26,8 @@ function pingfederate() {
         # checks org is present
         if [[ "$ORG_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]] && [[ "$admin_env_try" < "$api_call_retry_limit" ]] ; then
             echo "Org info available, getting ID..."
-            #check which environment
-            if [[ "$API_LOCATION" == *"api-staging.pingone.com"* ]]; then
-                ADMIN_ENV_NM='Core'
-            elif [[ "$API_LOCATION" == *"api.pingone.com"* ]]; then
-                ADMIN_ENV_NM='Administrators'
-            fi
+            # set administrators environment name
+            ADMIN_ENV_NM='Administrators'
             # get env id
             ADMIN_ENV_ID=$(curl -s --location --request GET "$ORG_HREF/environments/" \
             --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | \
@@ -53,7 +49,7 @@ function pingfederate() {
     function check_admin_env() {
         ENV_GET=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
-        
+
         ORG_ID=$(echo "$ENV_GET" | jq -rc '.organization.id')
         ORG_HREF=$(echo "$ENV_GET" | jq -rc '._links.organization.href')
 

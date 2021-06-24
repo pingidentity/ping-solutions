@@ -11,7 +11,7 @@
 # PF_PASSWORD
 
 echo "###### Beginning of Solutions PingOne PingFederate Pre-Config Tasks ######"
-    
+
 echo "------ Start of PingFederate Gateway creation ------"
 #set some individual counts
 create_gw_ct=0
@@ -28,7 +28,7 @@ function make_gw() {
           "type": "PING_FEDERATE",
           "enabled": true
         }')
-        
+
     CREATE_GW_ID=$(echo $CREATE_GW | jq -rc .id)
     CREATE_GW_UNIQUENESS=$(echo $CREATE_GW | jq -rc '.details[]?.code')
 
@@ -102,7 +102,7 @@ function link_pf_p1 () {
         if [[ "$link_gw_ct" -lt "$api_call_retry_limit" ]]; then
             echo "Gateway not linked successfully in Ping Federate, retrying."
             link_gw_ct=$((link_gw_ct+1))
-            link_pf_pf
+            link_pf_p1
         else
             echo "Gateway not linked successfully in Ping Federate and tries exceeded limit. Exiting now."
             exit 1
@@ -605,7 +605,7 @@ function create_pcv() {
                 ]
             }
             }')
-            
+
     PCV_ID=$(echo $PCV_SET | jq -rc '.id')
     verify_pcv
 }
