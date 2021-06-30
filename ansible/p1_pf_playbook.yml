@@ -4,6 +4,64 @@
   gather_facts: false
 
   tasks:
+  # UTC epoch time, subtract 1 day(86400), convert to year month day hour minute 2020-06-28T16:23
+  - name: Set Current Date
+    set_fact:
+      current_date: "{{ '%Y-%m-%dT%H:%M' | strftime(lookup('pipe', 'date +%s') | int - 86400 ) }}"
+
+  - name: Get the Enviroment information
+    uri:
+      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
+      method: GET
+      headers:
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      status_code: 200
+    register: env_info
+    retries: 2
+
+  - name: Get ORG_ID from Envionment Information
+    set_fact:
+      ORG_ID: "{{ env_info.json.organization.id }}"
+
+  - name: Get Deployment Information
+    uri:
+      url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments'
+      method: GET
+      headers:
+          Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+          content-type: text/plain
+      status_code: 200
+      return_content: yes
+      validate_certs: no
+    register: deployment
+    retries: 2
+
+  # Check if we've been here before
+  - name: Get createdAt date from current Environment
+    set_fact:
+      defined_envs: "{{ deployment.json._embedded.deployments |
+                    selectattr('assignedEnvironment','defined') |
+                    selectattr('assignedEnvironment.id','match', ENV_ID) |
+                    list }}"
+
+  - name: Sort thru Env List
+    set_fact:
+      current_env: "{{ defined_envs |
+                    map(attribute='createdAt') | list | first }}"
+    when: defined_envs is not defined and defined_envs != '[]' and defined_envs != ''
+
+  # Value of Current Environment ID createdAt date with regex filtering for comparison
+  - name: Set Current Environment createdAt Date
+    set_fact:
+      env_created_date: '{{ current_env | regex_replace("\:\d\d\..*") }}'
+    when: current_env is defined and current_env != ''
+
+  # Sets the env_created_date to the current system date when there are no deployments, continuing the script
+  - name: Set Current Environment createdAt if not deployed
+    set_fact:
+      env_created_date: "{{ current_date }}"
+    when: current_env is not defined or current_env == ''
+
   - name: Get BoM Components
     uri:
       url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/billOfMaterials'
@@ -13,55 +71,79 @@
       status_code: 200
     register: bom_get
     retries: 2
+    when: (env_created_date) <= (current_date)
 
   - name: Check BoM Components
     set_fact:
       bom_values: "{{ bom_get.json.products |
                   map(attribute='type') |
                   list }}"
+    when: (env_created_date) <= (current_date)
 
 # Ping Federate Block
 #need to also look at deployment to see if PF deployed
   - include: ./PF/PRE/pf_admin_sso.yml
-    when: '"PING_FEDERATE" in bom_values'
+    when: >
+      "PING_FEDERATE" in bom_values and
+      (env_created_date) <= (current_date)
 
 # CIAM Block
   - include: ./P1/CIAM/risk_policy_set.yml
     when: >
       "PING_ONE_MFA" in bom_values and
-      "PING_ONE_RISK" in bom_values
+      "PING_ONE_RISK" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/CIAM/auth_policy_set.yml
-    when: '"PING_ONE_MFA" in bom_values'
+    when: >
+      "PING_ONE_MFA" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/CIAM/theme_set.yml
-    when: '"PING_ONE_MFA" in bom_values'
+    when: >
+      "PING_ONE_MFA" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/CIAM/sample_app_create.yml
-    when: '"PING_ONE_MFA" in bom_values'
+    when: >
+      "PING_ONE_MFA" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/CIAM/user_duplicate.yml
-    when: '"PING_ONE_MFA" in bom_values'
+    when: >
+      "PING_ONE_MFA" in bom_values and
+      (env_created_date) <= (current_date)
 
 # Workforce Block
   - include: ./P1/WF/risk_policy_set.yml
     when: >
       "PING_ID" in bom_values and
-      "PING_ONE_RISK" in bom_values
+      "PING_ONE_RISK" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/WF/pass_policy_set.yml
-    when: '"PING_ID" in bom_values'
+    when: >
+      "PING_ID" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/WF/user_pop_set.yml
-    when: '"PING_ID" in bom_values'
+    when: >
+      "PING_ID" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/WF/user_duplicate.yml
-    when: '"PING_ID" in bom_values'
+    when: >
+      "PING_ID" in bom_values and
+      (env_created_date) <= (current_date)
 
   - include: ./P1/WF/sample_groups_p1.yml
-    when: '"PING_ID" in bom_values'
+    when: >
+      "PING_ID" in bom_values and
+      (env_created_date) <= (current_date)
 
 # Ping Federate Block
 #need to also look at deployment to see if PF deployed
   - include: ./PF/PRE/pf_admin_sso.yml
-    when: '"PING_FEDERATE" in bom_values'
+    when: >
+      "PING_FEDERATE" in bom_values and
+      (env_created_date) <= (current_date)
