@@ -7,7 +7,7 @@
     headers:
       X-Xsrf-Header: 'PingFederate'
     status_code: 200
-    validate_certs: no      
+    validate_certs: no
   register: gateway_check
   retries: 2
 
@@ -21,7 +21,7 @@
                       list | first }}"
 
 - name: PF Risk Adapter Gateway Conn ID set
-  set_fact:                        
+  set_fact:
     gateway_val: "{{ gateway_id + '|' + gateway_env_id }}"
 
 - name: PF Risk Adapter Policy Check
@@ -49,7 +49,7 @@
     headers:
       X-Xsrf-Header: 'PingFederate'
     status_code: 200
-    validate_certs: no      
+    validate_certs: no
   register: adapter_check
   retries: 2
 
@@ -176,6 +176,7 @@
       }
     body_format: json
     status_code: 201
-    validate_certs: no      
+    validate_certs: no
   register: adapter_check
   retries: 2
+  when: '"demop1risk" not in adapter_list'
