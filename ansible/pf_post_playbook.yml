@@ -48,8 +48,10 @@
       "PING_ID" in bom_values and
       "PING_FEDERATE" in bom_values
 
-#  - include: ./PF/POST/pf_risk_adapter.yml
-#    when: '"PING_FEDERATE" in bom_values'
+  - include: ./PF/POST/pf_risk_adapter.yml
+    when: >
+      "PING_ONE_RISK" in bom_values and
+      "PING_FEDERATE" in bom_values
 
   - include: ./PF/POST/pf_radius.yml
     when: >
