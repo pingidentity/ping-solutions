@@ -10,4 +10,4 @@ PINGFED_BASE_URL=$PINGFED_BASE_URL \
 PF_USERNAME=$PF_USERNAME \
 PF_PASSWORD=$PF_PASSWORD \
 AUTH_SERVER_BASE_URL=$AUTH_SERVER_BASE_URL" \
-/builds/solutions/thunder/ansible/$PLAYBOOK
+/builds/solutions/thunder/ansible/p1_pf_playbook.yml -vvv
