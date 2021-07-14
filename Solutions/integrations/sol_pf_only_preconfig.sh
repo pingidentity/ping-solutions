@@ -244,46 +244,6 @@ function pingfederate() {
         }
         oidc_content
 
-        # get, set client secret from PingFederateAdmin SSO app
-        client_secret_try=0
-        function client_secret() {
-            APP_CLIENT_SECRET_CHECK=$(curl -s --write-out "%{http_code}\n" --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications/$WEB_OIDC_APP_ID/secret" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
-            APP_CLIENT_SECRET_CHECK_RESULT=$(echo $APP_CLIENT_SECRET_CHECK | sed 's@.*}@@')
-            if [ $APP_CLIENT_SECRET_CHECK_RESULT == "200" ]; then
-                echo "app client secret found, setting..."
-                APP_CLIENT_SECRET=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications/$WEB_OIDC_APP_ID/secret" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '.secret')
-            elif [[ $APP_CLIENT_SECRET_CHECK_RESULT != "200" ]] && [[ "$client_secret_try" < "$api_call_retry_limit" ]]; then
-                client_secret_tries_left=$((api_call_retry_limit-client_secret_try))
-                echo "Unable to retrieve app client secret, retrying $client_secret_tries_left..."
-                client_secret_try=$((client_secret_try+1))
-                client_secret
-            else
-                echo "Unable to retrieve app client secret content. Maximum attempts exceeded!"
-                exit 1
-            fi
-        }
-        client_secret
-
-        # get, set client secret from PingFederateAdmin SSO app
-        attributes_try=0
-        function attributes () {
-            ATTRIBUTE_CHECK=$(curl -s --write-out "%{http_code}\n" --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
-            ATTRIBUTE_CHECK_RESULT=$(echo $ATTRIBUTE_CHECK | sed 's@.*}@@')
-            if [ $APP_CLIENT_SECRET_CHECK_RESULT == "200" ]; then
-                echo "attributes found, setting other variables..."
-                APP_USERNAME_ATTRIBUTE=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.name.formatted}") | .name')
-                APP_ATTR_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ADMIN_ENV_ID/applications/$WEB_OIDC_APP_ID/attributes" --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | jq -rc '._embedded.attributes[] | select(.value=="${user.memberOfGroupIDs}") | .name' )
-            elif [[ $APP_CLIENT_SECRET_CHECK_RESULT != "200" ]] && [[ "$attributes_try" < "$api_call_retry_limit" ]]; then
-                attributes_tries_left=$((api_call_retry_limit-attributes_try))
-                echo "Unable to retrieve attributes, retrying $attributes_tries_left more time(s)..."
-                attributes_try=$((attributes_try+1))
-                attributes
-            else
-                echo "Unable to retrieve attributes. Maximum attempts exceeded!"
-                exit 1
-            fi
-        }
-        attributes
 
         # get, set role name from PingFederateAdmin SSO app
         role_name_try=0
@@ -305,25 +265,12 @@ function pingfederate() {
         }
         role_name
 
-        function client_id() {
-        if [[ -z "$WEB_OIDC_APP_ID" ]] || [[ "$WEB_OIDC_APP_ID" == "" ]]; then
-            echo "Could not initially find PingFederateAdmin SSO app ID, sending to get this variable in above function..."
-            check_pf_admin_app_content
-        else
-            echo "Setting client id from PingFederateAdmin SSO app ID..."
-            APP_CLIENT_ID="$WEB_OIDC_APP_ID"
-        fi
-        }
-        client_id
-
         #set variable already known
         APP_AUTHN_METHOD="client_secret_basic"
 
     ### Output variables to OIDC properties file ###
-        echo "PF_OIDC_CLIENT_ID=$APP_CLIENT_ID" >> $OIDC_FILE
         echo "PF_OIDC_CLIENT_AUTHN_METHOD=$APP_AUTHN_METHOD" >> $OIDC_FILE
         # the client secret maybe need to be run against obfuscate script in PingFederate
-        echo "PF_OIDC_CLIENT_SECRET=$APP_CLIENT_SECRET" >> $OIDC_FILE
         echo "PF_OIDC_AUTHORIZATION_ENDPOINT=$APP_AUTH_EP" >> $OIDC_FILE
         echo "PF_OIDC_TOKEN_ENDPOINT=$APP_TOKEN_EP" >> $OIDC_FILE
         echo "PF_OIDC_USER_INFO_ENDPOINT=$APP_USERINFO_EP" >> $OIDC_FILE
@@ -332,7 +279,7 @@ function pingfederate() {
         echo "PF_OIDC_ACR_VALUES=" >> $OIDC_FILE
         echo "PF_OIDC_SCOPES=$APP_SCOPES" >> $OIDC_FILE
         echo "PF_OIDC_USERNAME_ATTRIBUTE_NAME=sub" >> $OIDC_FILE
-        echo "PF_OIDC_ROLE_ATTRIBUTE_NAME=$APP_ATTR_NAME" >> $OIDC_FILE
+
         echo "PF_OIDC_ROLE_ADMIN=$PF_ADMIN_GROUP_ID" >> $OIDC_FILE
         echo "PF_OIDC_ROLE_CRYPTOMANAGER=$PF_ADMIN_GROUP_ID" >> $OIDC_FILE
         echo "PF_OIDC_ROLE_USERADMIN=$PF_ADMIN_GROUP_ID" >> $OIDC_FILE

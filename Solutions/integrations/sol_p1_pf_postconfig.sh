@@ -23,7 +23,7 @@ function make_gw() {
         --header 'Content-Type: application/json' \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         --data-raw '{
-          "name": "PING_FED-DEMO_Gateway",
+          "name": "Ping Federate Demo Gateway",
           "description": "Gateway connection linking PingFederate to PingOne. See https://apidocs.pingidentity.com/pingone/platform/v1/api/#gateway-management.",
           "type": "PING_FEDERATE",
           "enabled": true
@@ -35,15 +35,15 @@ function make_gw() {
     #regex check if set to a uuid, uniqueness check if not unique.
     if [[ "$CREATE_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]] \
         && [[ "$CREATE_GW_UNIQUENESS" != "UNIQUENESS_VIOLATION" ]]; then
-        echo "PING_FED-DEMO_Gateway create successfully."
+        echo "Ping Federate Demo Gateway create successfully."
         make_gw_cred
     elif [[ "$CREATE_GW_UNIQUENESS" == "UNIQUENESS_VIOLATION" ]]; then
         #script was interupted before completion, gateway exists already. Grabbing that id.
         CREATE_GW_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/gateways" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-        | jq -rc '._embedded.gateways[] | select(.name=="PING_FED-DEMO_Gateway") | .id')
+        | jq -rc '._embedded.gateways[] | select(.name=="Ping Federate Demo Gateway") | .id')
         if [[ "$CREATE_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
-          echo "PING_FED-DEMO_Gateway already exists, found existing ID."
+          echo "Ping Federate Demo Gateway already exists, found existing ID."
           make_gw_cred
         fi
     else
@@ -59,8 +59,51 @@ function make_gw() {
     fi
 }
 
+function assign_gw_roles () {
+    P1_ROLES=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/roles" \
+              --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | \
+              jq -rc '._embedded.roles[] | select ((.name == "Environment Admin") or (.name == "Identity Data Admin")) | .id')
+    if [[ "$P1_ROLES" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}$'\n'[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12} ]]; then
+      GW_ROLES=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/gateways/$CREATE_GW_ID/roleAssignments" \
+                --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | \
+                jq -rc '._embedded.roleAssignments[].role.id')
+      MISSING_GW_ROLES=$(echo ${P1_ROLES[@]} ${GW_ROLES[@]} | tr ' ' '\n' | sort | uniq -u)
+      for GW_ROLE_ADD in $MISSING_GW_ROLES; do
+        ADD_GW_ROLE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/gateways/$CREATE_GW_ID/roleAssignments" \
+                    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+                    --header 'Content-Type: application/json' \
+                    --data-raw '{
+                                  "role": {
+                                    "id": "'"$GW_ROLE_ADD"'"
+                                  },
+                                  "scope": {
+                                    "id": "'"$ENV_ID"'",
+                                    "type": "ENVIRONMENT"
+                                  }
+                                }')
+      done
+    elif [[ "$create_gw_ct" -lt "$api_call_retry_limit" ]]; then
+      assign_gw_roles
+    else
+      echo "Gateway role query has failed and retries exceeded. Exiting now."
+      exit 1
+    fi
+}
+
 function make_gw_cred () {
     #create the gateway credential to tie to PF
+    #delete any existing credentials that have not been used in case script fails.
+    EXISTING_GW_CRED=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/gateways/$CREATE_GW_ID/credentials" \
+        --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | \
+        jq -rc '._embedded.credentials[] | select ( has("lastUsedAt") == false) | .id')
+    #loop to delete
+    if [[ -z ${EXISTING_GW_CRED+x} ]] || [[ "$EXISTING_GW_CRED" == "null" ]]; then
+      for GW_CREDENTIAL in $EXISTING_GW_CRED; do
+        DELETE_GW_CRED=$(curl -s --location --request DELETE "$API_LOCATION/environments/$ENV_ID/gateways/$CREATE_GW_ID/credentials/$GW_CREDENTIAL" \
+                          --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
+      done
+    fi
+    #make the new one
     CREATE_GW_CRED=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/gateways/$CREATE_GW_ID/credentials" \
         --header 'Content-Type: application/json' \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | \
@@ -90,11 +133,11 @@ function link_pf_p1 () {
         --header 'X-XSRF-Header: pingfederate' \
         --header "Authorization: Basic $PF_CRED" \
         --data-raw '{
-          "name": "PING_ONE_to_PING_FED_DEMO_Gateway",
+          "name": "PING_ONE_tTO_PING_FED_DEMO_GATEWAY",
           "active": true,
           "credential": "'"$CREATE_GW_CRED"'"
         }')
-    if [[ "$GW_LINK" == *"PING_ONE_to_PING_FED_DEMO_Gateway"* ]]; then
+    if [[ "$GW_LINK" == *"PING_ONE_tTO_PING_FED_DEMO_GATEWAY"* ]]; then
         #great success!
         echo "Gateway created successfully in PingFederate."
     else

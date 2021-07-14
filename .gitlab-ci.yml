@@ -6,11 +6,12 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 stages:
-  - 00-to-the-moon
-  - 01-configured-test
-  - 02-spin-that-car-around
-  - 03-reverted-test
-  - 04-back-from-the-moon
+  - 00-get-ready-to-rumble
+  - 01-to-the-moon
+  - 02-almost-to-the-moon
+  #- 03-explore-the-frontier
+  #- 04-explore-return-idk
+  - 05-back-to-earth
 
 default:
   #image: cypress/browsers:$DOCKER_IMAGE_VER
@@ -29,104 +30,52 @@ variables:
   KUBERNETES_MEMORY_LIMIT: "4000Mi"
   KUBERNETES_POLL_TIMEOUT: 600
 
-configure-solution:
-  stage: 00-to-the-moon
-  script:
-    #get cypress ready to roll
-    #- npm init -y && npm install cypress --save-dev
-    #- npm ci
-    # show all installed versions of Cypress binary
-    #- npx cypress cache list
-    # print CI environment variables for reference
-    #- npx cypress verify
-    #set up scripts for cypress environment configuration
-    - "./.gitlab-ci/00-base-environment-creation.sh"
-    #extra arg due to mem problems crashing the runner. silly Chrome :(
-    - npx cypress run --spec "./cypress/integration/CIAM/02-create_ciam_env.js" --browser chrome --headless
-    - npx cypress run --spec "./cypress/integration/WF/01-create_wf_env.js" --browser chrome --headless
-    #perform environment configuration (all, including set, revert, create, and delete)
-    - "./.gitlab-ci/01-base-environment-configuration.sh"
-    - "./.gitlab-ci/02-cypress-substitution.sh"
+create-pipeline-environments:
+  stage: 00-get-ready-to-rumble
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$ANSIBLE_DOCKER_PIPELINE_VERSION
+  script: "export PLAYBOOK='00-environment-create.yml'; /ansible/entrypoint.sh"
   artifacts:
     expire_in: 4 hours
     when: always
     paths:
-      #test where txt file going
-      - "./cypress/"
-      - "./cypress/integration/"
-      - "./cypress.json"
+      - /builds/solutions/thunder/.gitlab-ci/cypress/WF_cypress.json
+      - /builds/solutions/thunder/.gitlab-ci/cypress/CIAM_cypress.json
+      - /builds/solutions/thunder/.gitlab-ci/gitlab_var.prop
+    reports:
+      dotenv: /builds/solutions/thunder/.gitlab-ci/gitlab_var.prop
 
-CIAM-test-configured-state:
-  stage: 01-configured-test
-  script:
-    #run master set test scripts for CIAM
-    - npx cypress run --spec './cypress/integration/CIAM/set.js' --browser chrome --headless
+configure-CIAM-p1_pf_pre-environment:
+  stage: 01-to-the-moon
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$LEGACY_DOCKER_TAG
+  script: "export ENV_ID=$CIAM_ENV_ID;export PINGFED_BASE_URL=$CIAM_PINGFED_BASE_URL;bash ./.gitlab-ci/01-shell.sh"
   dependencies:
-    - configure-solution
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"
+    - create-pipeline-environments
 
-WF-test-configured-state:
-  stage: 01-configured-test
-  script:
-    #run master set test scripts for WF
-    - npx cypress run --spec './cypress/integration/WF/set.js' --browser chrome --headless
+configure-WF-p1_pf_pre-environment:
+  stage: 01-to-the-moon
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$LEGACY_DOCKER_TAG
+  script: "export ENV_ID=$WF_ENV_ID;export PINGFED_BASE_URL=$WF_PINGFED_BASE_URL;bash ./.gitlab-ci/01-shell.sh"
   dependencies:
-    - configure-solution
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"
+    - create-pipeline-environments
 
-revert-solution:
-  stage: 02-spin-that-car-around
-  script:
-    #api calls to revert environment for final testing.
-    - "./.gitlab-ci/03-base-environment-revert.sh"
+configure-CIAM-pf_post-environment:
+  stage: 02-almost-to-the-moon
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$LEGACY_DOCKER_TAG
+  script: "export ENV_ID=$CIAM_ENV_ID;export PINGFED_BASE_URL=$CIAM_PINGFED_BASE_URL;bash ./Solutions/integrations/sol_p1_pf_postconfig.sh"
   dependencies:
-    - configure-solution
+    - create-pipeline-environments
 
-CIAM-test-reverted-state:
-  stage: 03-reverted-test
-  script:
-    #run master revert tests scripts for CIAM
-    - npx cypress run --spec './cypress/integration/CIAM/revert.js' --browser chrome --headless
+configure-WF-pf_post-environment:
+  stage: 02-almost-to-the-moon
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$LEGACY_DOCKER_TAG
+  script: "export ENV_ID=$WF_ENV_ID;export PINGFED_BASE_URL=$WF_PINGFED_BASE_URL;bash ./Solutions/integrations/sol_p1_pf_postconfig.sh"
   dependencies:
-    - configure-solution
-    - revert-solution
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"
+    - create-pipeline-environments
 
-WF-test-reverted-state:
-  stage: 03-reverted-test
-  script:
-    #run master revert tests scripts for WF
-    - npx cypress run --spec './cypress/integration/WF/revert.js' --browser chrome --headless
+delete-pipeline-environments:
+  stage: 05-back-to-earth
+  image: $ANSIBLE_DOCKER_PIPELINE_IMAGE:$ANSIBLE_DOCKER_PIPELINE_VERSION
+  script: "export WORKER_APP_ACCESS_TOKEN=$PIPELINE_APP_ACCESS_TOKEN; export PLAYBOOK='04-environment-delete.yml'; /ansible/entrypoint.sh"
   dependencies:
-    - revert-solution
-    - configure-solution
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"
-
-env-cleanup:
-  stage: 04-back-from-the-moon
+    - create-pipeline-environments
   when: always
-  script:
-    - "./.gitlab-ci/04-base-environment-deletion.sh"
-  dependencies:
-    - configure-solution
-  artifacts:
-    expire_in: 4 hours
-    when: always
-    paths:
-      - "./cypress/videos/"
