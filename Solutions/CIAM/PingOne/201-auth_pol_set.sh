@@ -25,14 +25,51 @@ function def_pop_id () {
   --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
   | jq -rc '._embedded.populations[] | select(.name=="Sample Users") | .id')
 
-  #call everything else
-  self_reg_pol
-  passwordless_sms_pol
-  any_method_passwordless_pol
-  mfa_pol
+  check_existing_pols
+}
+
+#check for existing policies
+function check_existing_pols() {
+
+  SELF_REG_POL_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
+  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+  | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Self-Registration_Login_Policy") | .name')
+  if [ "$SELF_REG_POL_NAME" != "Demo_Self-Registration_Login_Policy" ]; then
+      self_reg_pol
+  elif [ "$SELF_REG_POL_NAME" == "Demo_Self-Registration_Login_Policy" ]; then
+    echo "Demo_Self-Registration_Login_Policy already exists!"
+  fi
+
+  SMS_POL_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
+  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+  | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Passwordless_SMS_Login_Policy") | .name')
+  if [ "$SMS_POL_NAME" != "Demo_Passwordless_SMS_Login_Policy" ]; then
+      passwordless_sms_pol
+  elif [ "$SMS_POL_NAME" == "Demo_Passwordless_SMS_Login_Policy" ]; then
+    echo "Demo_Passwordless_SMS_Login_Policy already exists!"
+  fi
+
+  ALL_MFA_POL_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
+  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+  | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Passwordless_Any_Method_Login_Policy") | .name')
+  if [ "$ALL_MFA_POL_NAME" != "Demo_Passwordless_Any_Method_Login_Policy" ]; then
+    any_method_passwordless_pol
+  elif [ "$ALL_MFA_POL_NAME" == "Demo_Passwordless_Any_Method_Login_Policy" ]; then
+    echo "Demo_Passwordless_Any_Method_Login_Policy already exists!"
+  fi
+
+  MFA_POL_NAME=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
+  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+  | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Multi_Factor_Login_Policy") | .name')
+  if [ "$MFA_POL_NAME" != "Demo_Multi_Factor_Login_Policy" ]; then
+    mfa_pol
+  elif [ "$MFA_POL_NAME" == "Demo_Multi_Factor_Login_Policy" ]; then
+    echo "Demo_Multi_Factor_Login_Policy already exists!"
+  fi
 }
 
 function self_reg_pol () {
+
   #create the new self-reg policy
   echo "Creating self-registration policy."
   SELF_POL_CREATE=$(curl -s --location --request POST "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
@@ -45,10 +82,10 @@ function self_reg_pol () {
     }'
   )
 
-  #Get the new SELF REG SFA ID
-  SELF_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
-  --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
-  | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Self-Registration_Login_Policy") | .id')
+    #Get the new SELF REG SFA ID
+    SELF_POL_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/signOnPolicies" \
+    --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
+    | jq -rc '._embedded.signOnPolicies[] | select(.name=="Demo_Self-Registration_Login_Policy") | .id')
 
   self_reg_action
 }
