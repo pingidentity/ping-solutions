@@ -38,6 +38,7 @@ create-pipeline-environments:
     paths:
       - /builds/solutions/thunder/.gitlab-ci/cypress/WF_cypress.json
       - /builds/solutions/thunder/.gitlab-ci/cypress/CIAM_cypress.json
+      - /builds/solutions/thunder/.gitlab-ci/gitlab_var.prop
     reports:
       dotenv: /builds/solutions/thunder/.gitlab-ci/gitlab_var.prop
 
@@ -55,19 +56,19 @@ configure-WF-p1_pf_pre-environment:
   dependencies:
     - create-pipeline-environments
 
-configure-CIAM-pf_post-environment:
-  stage: 02-almost-to-the-moon
-  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
-  script: ./.gitlab-ci/ansible-pipeline/02-ciam-configure.sh
-  dependencies:
-    - create-pipeline-environments
-
-configure-WF-pf_post-environment:
-  stage: 02-almost-to-the-moon
-  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
-  script: ./.gitlab-ci/ansible-pipeline/02-wf-configure.sh
-  dependencies:
-    - create-pipeline-environments
+#configure-CIAM-pf_post-environment:
+#  stage: 02-almost-to-the-moon
+#  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
+#  script: ./.gitlab-ci/ansible-pipeline/02-ciam-configure.sh
+#  dependencies:
+#    - create-pipeline-environments
+#
+#configure-WF-pf_post-environment:
+#  stage: 02-almost-to-the-moon
+#  image: $ANSIBLE_DOCKER_DEV_IMAGE:$ANSIBLE_DOCKER_DEV_VERSION
+#  script: ./.gitlab-ci/ansible-pipeline/02-wf-configure.sh
+#  dependencies:
+#    - create-pipeline-environments
 
 # test-configured-CIAM-environment:
 #   stage: 03-explore-the-frontier

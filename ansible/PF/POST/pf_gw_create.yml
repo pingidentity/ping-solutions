@@ -24,7 +24,7 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     body: >
       {
-        "name": "PING_FED-DEMO_Gateway",
+        "name": "Ping Federate Demo Gateway",
         "description": "Gateway connection linking PingFederate to PingOne. See https://apidocs.pingidentity.com/pingone/platform/v1/api/#gateway-management.",
         "type": "PING_FEDERATE",
         "enabled": true
@@ -33,20 +33,20 @@
     status_code: 201
   register: gw_create
   retries: 2
-  when: '"PING_FED-DEMO_Gateway" not in p1_gateway_list'
+  when: '"Ping Federate Demo Gateway" not in p1_gateway_list'
 
 - name: PF Gateway ID (Existing)
   set_fact:
     gateway_id: "{{ gateway_get.json._embedded.gateways |
-                    selectattr('name', 'match', 'PING_FED-DEMO_Gateway') |
+                    selectattr('name', 'match', 'Ping Federate Demo Gateway') |
                     map(attribute='id') |
                     list | first }}"
-  when: '"PING_FED-DEMO_Gateway" in p1_gateway_list'
+  when: '"Ping Federate Demo Gateway" in p1_gateway_list'
 
 - name: PF Gateway ID (New)
   set_fact:
     gateway_id: "{{ gw_create.json.id }}"
-  when: '"PING_FED-DEMO_Gateway" not in p1_gateway_list'
+  when: '"Ping Federate Demo Gateway" not in p1_gateway_list'
 
 - name: PF Gateway Credential Check (Existing only)
   uri:
@@ -57,7 +57,7 @@
     status_code: 200
   register: credential_get
   retries: 2
-  when: '"PING_FED-DEMO_Gateway" not in p1_gateway_list'
+  when: '"Ping Federate Demo Gateway" not in p1_gateway_list'
 
 - name: PF Gateway Credential List (Existing only)
   set_fact:
@@ -65,7 +65,7 @@
                       selectattr('lastUsedAt', 'undefined' ) |
                       map(attribute='id') |
                       list }}"
-  when: '"PING_FED-DEMO_Gateway" not in p1_gateway_list'
+  when: '"Ping Federate Demo Gateway" not in p1_gateway_list'
 
 - name: PF Gateway Credential Delete (Existing only)
   uri:
@@ -76,7 +76,7 @@
     status_code: 204
   retries: 2
   loop: "{{ credential_list }}"
-  when: '"PING_FED-DEMO_Gateway" not in p1_gateway_list'
+  when: '"Ping Federate Demo Gateway" not in p1_gateway_list'
 
 - name: PF Gateway Credential Create
   uri:
