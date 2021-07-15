@@ -39,6 +39,7 @@ function make_gw() {
         make_gw_cred
     elif [[ "$CREATE_GW_UNIQUENESS" == "UNIQUENESS_VIOLATION" ]]; then
         #script was interupted before completion, gateway exists already. Grabbing that id.
+        unset CREATE_GW_ID
         CREATE_GW_ID=$(curl -s --location --request GET "$API_LOCATION/environments/$ENV_ID/gateways" \
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" \
         | jq -rc '._embedded.gateways[] | select(.name=="Ping Federate Demo Gateway") | .id')
@@ -97,7 +98,7 @@ function make_gw_cred () {
         --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN" | \
         jq -rc '._embedded.credentials[] | select ( has("lastUsedAt") == false) | .id')
     #loop to delete
-    if [[ -z ${EXISTING_GW_CRED+x} ]] || [[ "$EXISTING_GW_CRED" == "null" ]]; then
+    if [[ "$EXISTING_GW_CRED" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12} ]]; then
       for GW_CREDENTIAL in $EXISTING_GW_CRED; do
         DELETE_GW_CRED=$(curl -s --location --request DELETE "$API_LOCATION/environments/$ENV_ID/gateways/$CREATE_GW_ID/credentials/$GW_CREDENTIAL" \
                           --header "Authorization: Bearer $WORKER_APP_ACCESS_TOKEN")
@@ -133,11 +134,11 @@ function link_pf_p1 () {
         --header 'X-XSRF-Header: pingfederate' \
         --header "Authorization: Basic $PF_CRED" \
         --data-raw '{
-          "name": "PING_ONE_tTO_PING_FED_DEMO_GATEWAY",
+          "name": "PING_ONE_TO_PING_FED_DEMO_GATEWAY",
           "active": true,
           "credential": "'"$CREATE_GW_CRED"'"
         }')
-    if [[ "$GW_LINK" == *"PING_ONE_tTO_PING_FED_DEMO_GATEWAY"* ]]; then
+    if [[ "$GW_LINK" == *"PING_ONE_TO_PING_FED_DEMO_GATEWAY"* ]]; then
         #great success!
         echo "Gateway created successfully in PingFederate."
     else
