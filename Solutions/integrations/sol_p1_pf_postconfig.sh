@@ -930,7 +930,11 @@ function create_pingid() {
     }' | jq -rc '.id')
     verify_pingid
 }
-create_pingid
+#only run Ping ID is enabled. WF only at.
+if [[ "$BOM_RESULT" == *"PING_ID"* ]]; then
+    create_pingid
+fi
+
 
 ############################################## Create Authentication Policy with CIDR selector and PingID adapter added as authentication sources  ##############################################
 
