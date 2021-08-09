@@ -1,3 +1,22 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 - name: Get Environment Information
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
@@ -9,9 +28,9 @@
   retries: 2
 
 - name: Get the ORG ID and API endpoint
-  set_fact: 
+  set_fact:
     orgID: "{{ env_info.json.organization.id }}"
-    org_API: "{{ env_info.json._links.organization.href }}"                         
+    org_API: "{{ env_info.json._links.organization.href }}"
 
 - name: 'ORG Environment query'
   uri:
@@ -21,15 +40,15 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
   retries: 2
-  register: org_info   
-  
+  register: org_info
+
 - name: Get Admin Environment ID
   set_fact:
     adminENV: "{{ org_info.json._embedded.environments |
               selectattr('name', 'match', 'Administrators') |
               map(attribute='id') |
               list |
-              first }}"  
+              first }}"
 
 - name: Get Schema
   uri:
@@ -43,11 +62,11 @@
 
 
 - name: Get Schema ID
-  set_fact: 
+  set_fact:
     user_schema_id: "{{ schema_check.json._embedded.schemas |
                     map(attribute='id') |
                     list |
-                    first }}"                              
+                    first }}"
 
 - name: Get Administrators Population
   uri:
@@ -60,7 +79,7 @@
   retries: 2
 
 - name: Get Administrators Population ID
-  set_fact: 
+  set_fact:
     admin_pop_id: "{{ admin_pop.json._embedded.populations |
                     selectattr('name', 'match', 'Administrators Population') |
                     map(attribute='id') |
@@ -113,7 +132,7 @@
   set_fact:
     pf_admin_group_id: "{{ admin_group_create.json._embedded.id
                         list | first }}"
-  when: '"PingFederate Administrators" not in admin_group_list'                     
+  when: '"PingFederate Administrators" not in admin_group_list'
 
 - name: Get PF Administrators Application
   uri:
@@ -127,9 +146,9 @@
 
 - name: Check If Administrators Application Exists
   set_fact:
-    admin_app_list: "{{ admin_app.json._embedded.applications | 
+    admin_app_list: "{{ admin_app.json._embedded.applications |
                     map(attribute='name') |
-                    list }}"                 
+                    list }}"
 
 - name: Create PF Administrators Application
   uri:
@@ -186,10 +205,10 @@
 
 - name: Get PF Admin SSO ID
   set_fact:
-    admin_app_id: "{{ admin_app_again.json._embedded.applications | 
+    admin_app_id: "{{ admin_app_again.json._embedded.applications |
                     selectattr('name', 'match', 'PingFederate Admin SSO') |
                     map(attribute='id') |
-                    list | first }}"                 
+                    list | first }}"
 
 - name: Get Applications Attributes
   uri:
@@ -203,9 +222,9 @@
 
 - name: Get PF Admin SSO Attributes
   set_fact:
-    name_attr: "{{ admin_app_again.json._embedded.attributes | 
+    name_attr: "{{ admin_app_again.json._embedded.attributes |
                     map(attribute='name') | list }}"
-    group_id_attr: "{{ admin_app_again.json._embedded.attributes | 
+    group_id_attr: "{{ admin_app_again.json._embedded.attributes |
                     map(attribute='name') | list }}"
 
 - name: Create PF Administrators Application Attribute
@@ -273,7 +292,7 @@
 
 - name: Store PF App Secret
   set_fact:
-    app_secret: "{{ admin_app_secret.json.secret }}"    
+    app_secret: "{{ admin_app_secret.json.secret }}"
 
 - name: Set PF File Location
   set_fact:

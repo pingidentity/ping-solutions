@@ -1,3 +1,22 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 - name: CIAM Theme Check
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/themes'
@@ -9,11 +28,10 @@
   register: theme_result
   retries: 2
 
-
 - name: CIAM Theme Check Created Themes
-  set_fact: 
-    theme_list: "{{ theme_result.json._embedded.themes | 
-    map(attribute='template') | 
+  set_fact:
+    theme_list: "{{ theme_result.json._embedded.themes |
+    map(attribute='template') |
     list }}"
 
 - name: CIAM Theme Create Focus Theme
@@ -43,7 +61,7 @@
               "name": "Ping Focus",
               "footer": "Experience sweet, secure digital experiences."
           }
-      
+
       }
     body_format: json
     status_code: 200

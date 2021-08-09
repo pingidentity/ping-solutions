@@ -1,3 +1,22 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 - name: WF Password Policy Check
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/passwordPolicies'
@@ -10,7 +29,7 @@
   retries: 2
 
 - name: WF Password Policy Check Passphrase Policy Default Status And Get The ID
-  set_fact: 
+  set_fact:
     passphrase_id: "{{ pass_policy_result.json._embedded.passwordPolicies |
                         selectattr('name', 'match', 'Passphrase') |
                         map(attribute='id') |
@@ -20,7 +39,7 @@
                         selectattr('name', 'match', 'Passphrase') |
                         map(attribute='default') |
                         list |
-                        first }}"               
+                        first }}"
 
 - name: WF Password Policy Policy Set
   uri:

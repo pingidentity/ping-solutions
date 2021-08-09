@@ -1,6 +1,25 @@
-# Get the List of all data stores currently in PingFederate  
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
+# Get the List of all data stores currently in PingFederate
 - name: PF P1 Authentication Check if Data store exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -64,9 +83,9 @@
     DS_NAME: "{{ check_ds.json['items'] | selectattr('name','match','Demo LDAP Data Store') | map(attribute='name') | list | first }}"
   when: '"Demo LDAP Data Store" in LIST_DS'
 
-# Get the List of all PCV's currently in PingFederate  
+# Get the List of all PCV's currently in PingFederate
 - name: PF P1 Authentication Check if LDAP password credential validator with the same name exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -145,10 +164,10 @@
     PCV_ID: "{{ check_pcv.json['items'] | selectattr('name','match','DemoPCV') | map(attribute='id') | list | first }}"
     PCV_NAME: "{{ check_pcv.json['items'] | selectattr('name','match','DemoPCV') | map(attribute='name') | list | first }}"
   when: '"DemoPCV" in LIST_PCV'
-  
+
 # Get the List of all Notification Publisher currently in PingFederate
 - name: PF P1 Authentication Check if Notification Publisher with the same name exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/notificationPublishers'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -227,9 +246,9 @@
     NP_NAME: "{{ check_np.json['items'] | selectattr('name','match','DemoSMTP') |map(attribute='name') | list | first }}"
   when: '"DemoSMTP" in LIST_NP'
 
-# Get the list of all adapters in PingFederate 
+# Get the list of all adapters in PingFederate
 - name: PF P1 Authentication Check if HTML form adapter with the same name exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -334,7 +353,7 @@
 
 # Get the list of all CIDR selectors returned by PingFederate
 - name: PF P1 Authentication Get the list of CIDR Selectors
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationSelectors'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -391,7 +410,7 @@
                   ]
                 }
               ]
-            } 
+            }
           }
     body_format: json
     status_code: 201
@@ -498,7 +517,7 @@
 
 # Get the ORG_ID from the Environment details
 - name: PF P1 Authentication Get the ORG_ID
-  set_fact: 
+  set_fact:
     ORG_ID: "{{ env_info.json.organization.id }}"
 
 # Get the deployment list from PingOne
@@ -507,7 +526,7 @@
     url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments'
     method: GET
     headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
         content-type: text/plain
     status_code: 200
     return_content: yes
@@ -518,8 +537,8 @@
 # Get the PingID deployment ID from the list
 - name: PF P1 Authentication Get the PingID deployment ID
   set_fact:
-    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | 
-                  selectattr('status','match', 'DEPLOYED') | 
+    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments |
+                  selectattr('status','match', 'DEPLOYED') |
                   selectattr('productType','match', 'PING_ID') |
                   selectattr('assignedEnvironment.id', 'match', ENV_ID) |
                   map(attribute='id') | list | first }}"
@@ -530,14 +549,14 @@
     url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEPLOY_ID}}/pingIdSettings'
     method: GET
     headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
         content-type: text/plain
     status_code: 200
     return_content: yes
     validate_certs: no
   register: pingid_properties
   retries: 2
-  
+
 # Base64 envode the values of PingId properties file for uploading into Ping Federate
 - name: PF P1 Authentication Base64 encode the Values in PingID properties file
   set_fact:
@@ -565,7 +584,7 @@
           "fields": [
               {
                 "name": "PingID Properties",
-                "value": "{{PINGID_PROP}}"           
+                "value": "{{PINGID_PROP}}"
               }
             ]
           },
@@ -575,8 +594,8 @@
                 "name": "subject",
                 "masked": false,
                 "pseudonym": true
-              }         
-            ]       
+              }
+            ]
           }
         }
     body_format: json
@@ -603,7 +622,7 @@
 
 # List the PingOne Connection ID from PF
 - name: PF P1 Authentication List the PingOne Connections
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/pingOneConnections'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -620,7 +639,7 @@
   retries: 2
 
 # Get the PingOne Gateway connection ID from the list
-- name: PF P1 Authentication Get the PingOne gateway connection ID 
+- name: PF P1 Authentication Get the PingOne gateway connection ID
   set_fact:
     P1_CON_ID: "{{ p1_con.json['items'] | selectattr('name','match','PING_ONE_to_PING_FED_DEMO_Gateway') | map(attribute='id') | list | first }}"
 
@@ -957,7 +976,7 @@
 
 # Get the List of all Authentication Policy returned by Ping Federate
 - name: PF P1 Authentication Get the list of Authentication Policies
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicies/default'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"

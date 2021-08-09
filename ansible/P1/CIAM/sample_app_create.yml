@@ -1,3 +1,22 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 - name: CIAM Create App Get Signing Cert
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/keys'
@@ -24,7 +43,7 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
   register: app_info
-  retries: 2    
+  retries: 2
 
 - name: CIAM Create App Filter Application List
   set_fact:
@@ -147,7 +166,7 @@
   set_fact:
     self_reg_id: "{{ policy_action_check.json._embedded.signOnPolicies |
                     selectattr('name', 'match', 'Demo_Self-Registration_Login_Policy') |
-                    map(attribute='id') | list | first }}"         
+                    map(attribute='id') | list | first }}"
     passwordless_sms_id: "{{ policy_action_check.json._embedded.signOnPolicies |
                     selectattr('name', 'match', 'Demo_Passwordless_SMS_Login_Policy') |
                     map(attribute='id') | list | first }}"
@@ -163,7 +182,7 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
   register: app_info_recheck
-  retries: 2    
+  retries: 2
 
 - name: CIAM Create App Filter Application List
   set_fact:
@@ -189,7 +208,7 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
   register: ssa_info
-  retries: 2    
+  retries: 2
 
 - name: CIAM Create App Check if Self Service App Policy Exists
   set_fact:
@@ -223,7 +242,7 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
   register: sms_info
-  retries: 2    
+  retries: 2
 
 - name: CIAM Create App Check if Passwordless SMS Policy Exists
   set_fact:
@@ -259,7 +278,7 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
   register: any_info
-  retries: 2    
+  retries: 2
 
 - name: CIAM Create App Check if Passwordless Any Method Policy Exists
   set_fact:

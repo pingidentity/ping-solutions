@@ -1,3 +1,22 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 # Get the Environment Information from PingOne
 - name: PF Radius Server using PingID Radius Server using PingID PCV
   uri:
@@ -11,7 +30,7 @@
 
 # Get the ORG_ID from the Environment details
 - name: PF Radius Server using PingID PCV Get the ORG_ID
-  set_fact: 
+  set_fact:
     ORG_ID: "{{ env_info.json.organization.id }}"
 
 # Get the deployment list from PingOne
@@ -20,7 +39,7 @@
     url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments'
     method: GET
     headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
         content-type: text/plain
     status_code: 200
     return_content: yes
@@ -31,8 +50,8 @@
 # Get the PingID deployment ID from the list
 - name: PF Radius Server using PingID PCV Get the PingID deployment ID
   set_fact:
-    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | 
-                selectattr('status','match', 'DEPLOYED') | 
+    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments |
+                selectattr('status','match', 'DEPLOYED') |
                 selectattr('productType','match', 'PING_ID') |
                 selectattr('assignedEnvironment.id', 'match', ENV_ID) |
                 map(attribute='id') | list | first }}"
@@ -43,7 +62,7 @@
     url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEPLOY_ID}}/pingIdSettings'
     method: GET
     headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
         content-type: text/plain
     status_code: 200
     return_content: yes
@@ -51,9 +70,9 @@
   register: pingid_properties
   retries: 2
 
-# Get the List of all PCV's currently in PingFederate  
+# Get the List of all PCV's currently in PingFederate
 - name: PF Radius Server using PingID PCV Check if LDAP password credential validator with the same name exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -81,7 +100,7 @@
 
 # Create PingID PCV with Integerated Radius server
 - name: PF Radius Server using PingID PCV Create PingID PCV with integerated Radius Server
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -143,7 +162,7 @@
                 ],
                 "extendedAttributes": []
             }
-            
+
         }
     body_format: json
     status_code: 201
