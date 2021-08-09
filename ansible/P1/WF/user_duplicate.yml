@@ -1,3 +1,22 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 - name: WF User Modification Get Environment Information
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}'
@@ -9,9 +28,9 @@
   retries: 2
 
 - name: WF User Modification Get the ORG ID and API endpoint
-  set_fact: 
+  set_fact:
     orgID: "{{ env_info.json.organization.id }}"
-    org_API: "{{ env_info.json._links.organization.href }}"                         
+    org_API: "{{ env_info.json._links.organization.href }}"
 
 - name: WF User Modification ORG Environment query
   uri:
@@ -21,15 +40,15 @@
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
   retries: 2
-  register: org_info   
-  
+  register: org_info
+
 - name: WF User Modification Get Admin Environment ID
   set_fact:
     adminENV: "{{ org_info.json._embedded.environments |
               selectattr('name', 'match', 'Administrators') |
               map(attribute='id') |
               list |
-              first }}"  
+              first }}"
 
 - name: WF User Modification Get Users
   uri:
@@ -38,7 +57,7 @@
     headers:
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
-  retries: 2  
+  retries: 2
   register: admin_user_info
 
 - name: WF User Modification Get User Data

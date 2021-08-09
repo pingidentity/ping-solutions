@@ -1,116 +1,135 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 # Read all existing groups in PingOne
-  - name: Create Sample groups in PingOne Read all Groups in PingOne
-    uri:
-      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups'
-      method: GET
-      headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-      status_code: 200
-      return_content: yes
-    register: read_groups
-    retries: 2
+- name: Create Sample groups in PingOne Read all Groups in PingOne
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups'
+    method: GET
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+    status_code: 200
+    return_content: yes
+  register: read_groups
+  retries: 2
 
 # List all Groups by name in P1
-  - name: Create Sample groups in PingOne List Groups by name in PingOne
-    set_fact:
-      list_groups: "{{read_groups.json._embedded.groups | map(attribute='name') | list}} }}"
+- name: Create Sample groups in PingOne List Groups by name in PingOne
+  set_fact:
+    list_groups: "{{read_groups.json._embedded.groups | map(attribute='name') | list}} }}"
 
 # Get the Single_factor group_ID
-  - name: Create Sample groups in PingOne Get the Single_factor_Group ID
-    set_fact:
-      single_factor_id: "{{read_groups.json._embedded.groups | selectattr('name','match','Single_Factor_Group') | map(attribute='id') | list | first }}"
-    when: '"Single_Factor_Group" in list_groups'
+- name: Create Sample groups in PingOne Get the Single_factor_Group ID
+  set_fact:
+    single_factor_id: "{{read_groups.json._embedded.groups | selectattr('name','match','Single_Factor_Group') | map(attribute='id') | list | first }}"
+  when: '"Single_Factor_Group" in list_groups'
 
 # Get the Multi_Factor group ID
-  - name: Create Sample groups in PingOne Get the Multi_factor_Group ID
-    set_fact:
-      multi_factor_id: "{{read_groups.json._embedded.groups | selectattr('name','match','Multi_Factor_Group') | map(attribute='id') | list | first }}"
-    when: '"Multi_Factor_Group" in list_groups'
+- name: Create Sample groups in PingOne Get the Multi_factor_Group ID
+  set_fact:
+    multi_factor_id: "{{read_groups.json._embedded.groups | selectattr('name','match','Multi_Factor_Group') | map(attribute='id') | list | first }}"
+  when: '"Multi_Factor_Group" in list_groups'
 
 # Create the Single Factor User group
-  - name: Create Sample groups in PingOne Create a Single Factor user group
-    uri:
-      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups'
-      method: POST
-      headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-        Content-Type: application/json
-      body: >
-            {
-              "name": "Single_Factor_Group",
-              "description": "This is a group for Single-Factor Authentication Policy",
-              "customData": {}
-            }
-      body_format: json
-      status_code: 201
-    register: single_fact
-    retries: 2
-    when: '"Single_Factor_Group" not in list_groups'
+- name: Create Sample groups in PingOne Create a Single Factor user group
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups'
+    method: POST
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: application/json
+    body: >
+          {
+            "name": "Single_Factor_Group",
+            "description": "This is a group for Single-Factor Authentication Policy",
+            "customData": {}
+          }
+    body_format: json
+    status_code: 201
+  register: single_fact
+  retries: 2
+  when: '"Single_Factor_Group" not in list_groups'
 
 # Create Multi_Factor  user group
-  - name: Create Sample groups in PingOne Create a Multi-Factor user group
-    uri:
-      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups'
-      method: POST
-      headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-        Content-Type: application/json
-      body: >
-            {
-              "name": "Multi_Factor_Group",
-              "description": "This is a group for Multi factor Authentication Policy",
-              "customData": {}
-            }
-      body_format: json
-      status_code: 201
-    register: multi_fact
-    retries: 2
-    when: '"Multi_Factor_Group" not in list_groups'
+- name: Create Sample groups in PingOne Create a Multi-Factor user group
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups'
+    method: POST
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: application/json
+    body: >
+          {
+            "name": "Multi_Factor_Group",
+            "description": "This is a group for Multi factor Authentication Policy",
+            "customData": {}
+          }
+    body_format: json
+    status_code: 201
+  register: multi_fact
+  retries: 2
+  when: '"Multi_Factor_Group" not in list_groups'
 
 # Get the Single_factor_group ID from the created single_fact task
-  - name: Create Sample groups in PingOne Get the Single_factor_Group ID
-    set_fact:
-      single_factor_id: "{{single_fact.json.id }}"
-    when: '"Single_Factor_Group" not in list_groups'
+- name: Create Sample groups in PingOne Get the Single_factor_Group ID
+  set_fact:
+    single_factor_id: "{{single_fact.json.id }}"
+  when: '"Single_Factor_Group" not in list_groups'
 
 # Get the Single_factor_group ID from the created multi_fact task
-  - name: Get the Multi_factor_Group ID
-    set_fact:
-      multi_factor_id: "{{multi_fact.json.id }}"
-    when: '"Multi_Factor_Group" not in list_groups'
+- name: Get the Multi_factor_Group ID
+  set_fact:
+    multi_factor_id: "{{multi_fact.json.id }}"
+  when: '"Multi_Factor_Group" not in list_groups'
 
 # Add the first 20 users to Single_factor Group
-  - name: Create Sample groups in PingOne Add the First 20 users to Single_Factor_Group
-    uri:
-      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups/{{single_factor_id}}'
-      method: PUT
-      headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-        Content-Type: application/json
-      body: >
-            {
-              "name": "Single_Factor_Group",
-              "userFilter": "(email sw \"a\") or (email sw \"b\") or (email sw \"c\") or (email sw \"d\") or (email sw \"e\") or (email sw \"f\") or (email sw \"g\") or (email sw \"h\") or (email sw \"i\") or (email sw \"j\") "
-            }
-      body_format: json
-      status_code: 200
-    register: user_set_1
-    retries: 2
+- name: Create Sample groups in PingOne Add the First 20 users to Single_Factor_Group
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups/{{single_factor_id}}'
+    method: PUT
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: application/json
+    body: >
+          {
+            "name": "Single_Factor_Group",
+            "userFilter": "(email sw \"a\") or (email sw \"b\") or (email sw \"c\") or (email sw \"d\") or (email sw \"e\") or (email sw \"f\") or (email sw \"g\") or (email sw \"h\") or (email sw \"i\") or (email sw \"j\") "
+          }
+    body_format: json
+    status_code: 200
+  register: user_set_1
+  retries: 2
 
 # Add the remaining 18 users to multi _factor Group
-  - name: Create Sample groups in PingOne Add the remaining 18 users to Multi_Factor_Group
-    uri:
-      url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups/{{multi_factor_id}}'
-      method: PUT
-      headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
-        Content-Type: application/json
-      body: >
-            {
-              "name": "Multi_Factor_Group",
-              "userFilter": "(email sw \"k\") or (email sw \"l\") or (email sw \"m\") or (email sw \"n\") or (email sw \"o\") or (email sw \"p\") or (email sw \"q\") or (email sw \"r\") or (email sw \"s\") or (email sw \"t\") or (email sw \"u\") or (email sw \"v\") or (email sw \"w\") or (email sw \"x\") or (email sw \"y\") or (email sw \"z\") or (email sw \"1\") or (email sw \"2\")"
-            }
-      body_format: json
-      status_code: 200
-    register: user_set_2
-    retries: 2
+- name: Create Sample groups in PingOne Add the remaining 18 users to Multi_Factor_Group
+  uri:
+    url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/groups/{{multi_factor_id}}'
+    method: PUT
+    headers:
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
+      Content-Type: application/json
+    body: >
+          {
+            "name": "Multi_Factor_Group",
+            "userFilter": "(email sw \"k\") or (email sw \"l\") or (email sw \"m\") or (email sw \"n\") or (email sw \"o\") or (email sw \"p\") or (email sw \"q\") or (email sw \"r\") or (email sw \"s\") or (email sw \"t\") or (email sw \"u\") or (email sw \"v\") or (email sw \"w\") or (email sw \"x\") or (email sw \"y\") or (email sw \"z\") or (email sw \"1\") or (email sw \"2\")"
+          }
+    body_format: json
+    status_code: 200
+  register: user_set_2
+  retries: 2

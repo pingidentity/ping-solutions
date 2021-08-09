@@ -11,6 +11,7 @@ ENV BUILD_PACKAGES \
   py3-jinja2 \
   py3-paramiko \
   py3-yaml \
+  jq \
   ca-certificates
 
 # If installing ansible@testing

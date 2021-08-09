@@ -1,6 +1,25 @@
-# Get the List of all data stores currently in PingFederate  
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
+# Get the List of all data stores currently in PingFederate
 - name: SSPR using PINGID Check if Data store exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/dataStores'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -75,7 +94,7 @@
 
 # Get the ORG_ID from the Environment details
 - name: PF Self Service PWD Reset and CIDR Get the ORG_ID
-  set_fact: 
+  set_fact:
     ORG_ID: "{{ env_info.json.organization.id }}"
 
 # Get the deployment list from PingOne
@@ -84,7 +103,7 @@
     url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments'
     method: GET
     headers:
-        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+        Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
         content-type: text/plain
     status_code: 200
     return_content: yes
@@ -95,8 +114,8 @@
 # Get the PingID deployment ID from the list
 - name: PF Self Service PWD Reset and CIDR Get the PingID deployment ID
   set_fact:
-    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments | 
-                  selectattr('status','match', 'DEPLOYED') | 
+    DEPLOY_ID: "{{ deployment_id.json._embedded.deployments |
+                  selectattr('status','match', 'DEPLOYED') |
                   selectattr('productType','match', 'PING_ID') |
                   selectattr('assignedEnvironment.id', 'match', ENV_ID) |
                   map(attribute='id') | list | first }}"
@@ -107,7 +126,7 @@
     url: '{{API_LOCATION}}/organizations/{{ORG_ID}}/deployments/{{DEPLOY_ID}}/pingIdSettings'
     method: GET
     headers:
-      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'   
+      Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
       content-type: text/plain
     status_code: 200
     return_content: yes
@@ -118,9 +137,9 @@
   set_fact:
     PINGID_PROP: "{{pingid_properties.content | b64encode}}"
 
-# Get the List of all PCV's currently in PingFederate  
+# Get the List of all PCV's currently in PingFederate
 - name: SSPR using PINGID Check if LDAP password credential validator with the same name exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/passwordCredentialValidators'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -178,7 +197,7 @@
               {
               "name": "PingID Username Attribute",
               "value": "mail"
-              }                
+              }
             ]
           }
           }
@@ -202,9 +221,9 @@
     PCV_NAME: "{{ check_pcv.json['items'] | selectattr('name','match','Demo_LDAP_PCV') | map(attribute='name') | list | first }}"
   when: '"Demo_LDAP_PCV" in LIST_PCV'
 
-# Get the list of all adapters in PingFederate 
+# Get the list of all adapters in PingFederate
 - name: SSPR using PINGID Check if HTML form adapter with the same name exists
-  uri: 
+  uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
     user: "{{PF_USERNAME}}"
     password: "{{PF_PASSWORD}}"
@@ -290,4 +309,3 @@
     follow_redirects: all
   register: create_html_adap
   when: '"DemoHtmlForm" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
-

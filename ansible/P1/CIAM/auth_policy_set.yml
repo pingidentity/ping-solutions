@@ -1,3 +1,22 @@
+- name: Get Token
+  uri:
+    url: '{{TOKEN_ENDPOINT}}'
+    method: POST
+    url_username: "{{ CLIENT_ID }}"
+    url_password: "{{ CLIENT_SECRET }}"
+    force_basic_auth: True
+    body:
+      "grant_type=client_credentials"
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  register: client_token_get
+  retries: 2
+
+- name: Set API Token
+  set_fact:
+    WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
+
 - name: CIAM Auth Policy Get Population
   uri:
     url: '{{ API_LOCATION }}/environments/{{ ENV_ID }}/populations'
@@ -9,7 +28,7 @@
   retries: 2
 
 - name: CIAM Auth Policy Get Population ID
-  set_fact: 
+  set_fact:
     popID: "{{ pop_list.json._embedded.populations |
                   selectattr('name', 'match', 'Sample Users') |
                   map(attribute='id') |
@@ -120,7 +139,7 @@
     self_reg_id: "{{ policy_action_check.json._embedded.signOnPolicies |
                     selectattr('name', 'match', 'Demo_Self-Registration_Login_Policy') |
                     map(attribute='id') |
-                    list | first }}"         
+                    list | first }}"
     passwordless_sms_id: "{{ policy_action_check.json._embedded.signOnPolicies |
                     selectattr('name', 'match', 'Demo_Passwordless_SMS_Login_Policy') |
                     map(attribute='id') |
@@ -315,7 +334,7 @@
     body_format: json
     status_code: 201
   retries: 2
-  when: '1 not in mfa_reg_check'    
+  when: '1 not in mfa_reg_check'
 
 - name: CIAM Auth Policy Passwordless MFA Policy Action Create Step 2
   uri:
