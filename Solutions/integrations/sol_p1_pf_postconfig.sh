@@ -36,6 +36,7 @@ function make_gw() {
     if [[ "$CREATE_GW_ID" =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]] \
         && [[ "$CREATE_GW_UNIQUENESS" != "UNIQUENESS_VIOLATION" ]]; then
         echo "Ping Federate Demo Gateway create successfully."
+        assign_gw_roles
         make_gw_cred
     elif [[ "$CREATE_GW_UNIQUENESS" == "UNIQUENESS_VIOLATION" ]]; then
         #script was interupted before completion, gateway exists already. Grabbing that id.
@@ -52,6 +53,7 @@ function make_gw() {
         if [[ "$create_gw_ct" -lt "$api_call_retry_limit" ]]; then
             echo "Gateway was not created successfully, retrying."
             create_gw_ct=$((create_gw_ct+1))
+            assign_gw_roles
             make_gw
         else
             echo "Gateway was not created successfully and tries exceeded limit. Exiting now."
