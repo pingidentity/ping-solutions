@@ -264,7 +264,6 @@
     headers:
       Authorization: 'Bearer {{ WORKER_APP_ACCESS_TOKEN }}'
     status_code: 200
-    validate_certs: true
   register: policy_check
   retries: 2
 

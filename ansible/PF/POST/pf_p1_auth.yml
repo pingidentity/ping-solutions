@@ -530,7 +530,6 @@
         content-type: text/plain
     status_code: 200
     return_content: yes
-    validate_certs: no
   register: deployment_id
   retries: 2
 
@@ -553,7 +552,6 @@
         content-type: text/plain
     status_code: 200
     return_content: yes
-    validate_certs: no
   register: pingid_properties
   retries: 2
 
@@ -561,6 +559,7 @@
 - name: PF P1 Authentication Base64 encode the Values in PingID properties file
   set_fact:
     PINGID_PROP: "{{pingid_properties.content | b64encode}}"
+
 - name: PF P1 Authentication Create PingID adapter
   uri:
     url: '{{PINGFED_BASE_URL}}/pf-admin-api/v1/idp/adapters'
