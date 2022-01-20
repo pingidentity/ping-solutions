@@ -43,7 +43,6 @@
         content-type: text/plain
     status_code: 200
     return_content: yes
-    validate_certs: no
   register: deployment_id
   retries: 2
 
@@ -66,7 +65,6 @@
         content-type: text/plain
     status_code: 200
     return_content: yes
-    validate_certs: no
   register: pingid_properties
   retries: 2
 

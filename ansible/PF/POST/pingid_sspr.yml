@@ -33,6 +33,7 @@
     status_code: 200
     follow_redirects: all
     return_content: yes
+    validate_certs: no
   register: check_ds
 
 # List all data stores by name
@@ -64,6 +65,7 @@
     body_format: json
     status_code: 201
     follow_redirects: all
+    validate_certs: no
   register: create_ds
   when: '"Demo LDAP Data Store" not in LIST_DS or LIST_DS is not defined'
 
@@ -107,7 +109,6 @@
         content-type: text/plain
     status_code: 200
     return_content: yes
-    validate_certs: no
   register: deployment_id
   retries: 2
 
@@ -130,7 +131,6 @@
       content-type: text/plain
     status_code: 200
     return_content: yes
-    validate_certs: no
   register: pingid_properties
 
 - name: Base64 encode the Values in PingID properties file
@@ -204,6 +204,7 @@
     body_format: json
     status_code: 201
     follow_redirects: all
+    validate_certs: no
   register: create_pcv
   when: '"Demo_LDAP_PCV" not in LIST_PCV or LIST_PCV is not defined'
 
@@ -237,6 +238,7 @@
     status_code: 200
     follow_redirects: all
     return_content: yes
+    validate_certs: no
   register: check_adap
 
 # List all adapters by name
@@ -307,5 +309,6 @@
     body_format: json
     status_code: 201
     follow_redirects: all
+    validate_certs: no
   register: create_html_adap
   when: '"DemoHtmlForm" not in LIST_ADAPTER or LIST_ADAPTER is not defined'
