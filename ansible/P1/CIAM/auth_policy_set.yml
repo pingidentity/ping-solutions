@@ -277,16 +277,16 @@
             "enabled": true
         },
         "boundBiometrics": {
-            "enabled": false
+            "enabled": true
         },
         "authenticator": {
-            "enabled": false
+            "enabled": true
         },
         "email": {
-            "enabled": false
+            "enabled": true
         },
         "securityKey": {
-            "enabled": false
+            "enabled": true
         }
       }
     body_format: json
