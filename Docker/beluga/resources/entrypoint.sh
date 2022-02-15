@@ -1,5 +1,11 @@
 
 #!/bin/sh
+if [[ -z ${TOKEN_ENDPOINT+x} ]] && [[ -n ${CLIENT_ID+x} ]] && [[ -n ${CLIENT_SECRET+x} ]]; then
+    echo "Necessary variables not set, exiting..."
+    exit 0
+else
+    echo "Necessary variables set, continuing..."
+fi
 
 P1_VAR_FILE="/ansible/playbooks/p1_vars.json"
 PF_VAR_FILE="/ansible/playbooks/pf_vars.json"
@@ -20,7 +26,12 @@ else
 fi
 
 #generate the PF base url
-export PINGFED_BASE_URL=$(echo "$PINGFEDERATE_ADMIN_SERVER:$PF_ADMIN_PORT")
+if [ -n $PF_ADMIN_PORT ]; then
+    export PINGFED_BASE_URL=$(echo "$PINGFEDERATE_ADMIN_SERVER:$PF_ADMIN_PORT")
+else
+    export PINGFED_BASE_URL=$(echo "$PINGFEDERATE_ADMIN_SERVER")
+fi
+
 
 #create flat file to use in Ansible to define various P1 variables. Will move existing to old if script has already run against target environment
 if [[ -n "$AUTH_TOKEN_ENDPOINT" ]] && [[ -n "$CLIENT_ID" ]] && [[ -n "$CLIENT_SECRET" ]]; then
