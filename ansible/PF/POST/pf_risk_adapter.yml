@@ -97,18 +97,36 @@
         "configuration": {
           "tables": [
             {
-              "name": "Additional User Attributes (optional)",
-              "rows": []
+                "name": "Additional User Attributes (optional)",
+                "rows": []
             },
             {
-              "name": "PingOne Risk API Response Mappings (optional)",
-              "rows": []
+                "name": "PingOne Risk API Response Mappings (optional)",
+                "rows": [
+                    {
+                        "fields": [
+                            {
+                                "name": "Local Attribute",
+                                "value": "username"
+                            },
+                            {
+                                "name": "PingOne Risk API Attribute Mapping",
+                                "value": "/event/user/name"
+                            }
+                        ],
+                        "defaultRow": false
+                    }
+                ]
             }
           ],
           "fields": [
             {
               "name": "PingOne Environment",
               "value": "{{ gateway_val }}"
+            },
+            {
+              "name": "PingOne Risk Policy",
+              "value": "{{ risk_pol_id }}"
             },
             {
               "name": "Risk Policy ID",
@@ -169,27 +187,39 @@
               "pseudonym": true
             }
           ],
-          "extendedAttributes": [],
+          "extendedAttributes": [
+              {
+                "name": "username",
+                "masked": false,
+                "pseudonym": true
+              }
+          ],
           "maskOgnlValues": false
         },
         "attributeMapping": {
           "attributeSources": [],
           "attributeContractFulfillment": {
             "riskLevel": {
-              "source": {
-                "type": "ADAPTER"
-              },
-              "value": "riskLevel"
+                "source": {
+                    "type": "ADAPTER"
+                },
+                "value": "riskLevel"
             },
             "riskValue": {
-              "source": {
-                "type": "ADAPTER"
-              },
-              "value": "riskValue"
+                "source": {
+                    "type": "ADAPTER"
+                },
+                "value": "riskValue"
+            },
+            "username": {
+                "source": {
+                    "type": "ADAPTER"
+                },
+                "value": "username"
             }
           },
           "issuanceCriteria": {
-            "conditionalCriteria": []
+              "conditionalCriteria": []
           }
         }
       }

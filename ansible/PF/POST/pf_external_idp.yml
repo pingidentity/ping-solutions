@@ -13,6 +13,10 @@
   register: client_token_get
   retries: 2
 
+- name: Replace TOKEN_ENDPOINT to PingOne base url
+  set_fact:
+    ping_one_base_url: "{{ API_LOCATION | regex_replace('api', 'auth') | regex_replace('v1', '')}}"
+
 - name: Set API Token
   set_fact:
     WORKER_APP_ACCESS_TOKEN: "{{ client_token_get.json.access_token }}"
@@ -166,8 +170,8 @@
       {
       "type": "SP",
       "id": "demo_pf_sp_conn",
-      "entityId": "Demo_SP_Connection",
-      "name": "Demo SP Connection",
+      "entityId": "Demo_PingOne_Connection",
+      "name": "Demo PingOne Connection",
       "active": "true",
       "contactInfo": {},
       "loggingMode": "STANDARD",
@@ -190,10 +194,14 @@
         "enabledProfiles": [
           "IDP_INITIATED_SSO"
           ],
+        "incomingBindings": [
+          "POST",
+          "REDIRECT"
+        ],
         "ssoServiceEndpoints": [
           {
             "binding": "POST",
-            "url": "https://decoder.pingidentity.cloud/saml",
+            "url": "{{ ping_one_base_url }}{{ ENV_ID }}/saml20/sp/acs",
             "isDefault": true,
             "index": 0
           }
@@ -390,7 +398,7 @@
                 }
             ]
         },
-        "spEntityId": "demo_pf_sp_app",
+        "spEntityId": "Demo_PingOne_Connection",
         "spSigning": {
             "key": {
                 "id": "{{ key_id }}"
