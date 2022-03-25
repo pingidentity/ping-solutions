@@ -129,10 +129,6 @@
               "value": "{{ risk_pol_id }}"
             },
             {
-              "name": "Risk Policy ID",
-              "value": "{{ risk_pol_id }}"
-            },
-            {
               "name": "Include Device Profile",
               "value": "true"
             },

@@ -671,7 +671,7 @@
                         "fields": [
                           {
                             "name": "Local Attribute",
-                            "value": "popu.id"
+                            "value": "population.id"
                           },
                           {
                             "name": "PingOne for Customers Attribute",
@@ -1170,7 +1170,7 @@
                                           "source": {
                                             "type": "ADAPTER",
                                             "id": "{{P1_HTMLFORM_ID}}"
-                                         },
+                                          },
                                           "value": "email"
                                         },
                                         "subject": {
@@ -1178,7 +1178,13 @@
                                             "type": "ADAPTER",
                                             "id": "{{P1_HTMLFORM_ID}}"
                                           },
-                                          "value": "subject"
+                                          "value": "username"
+                                        },
+                                        "SAML_AUTHN_CTX": {
+                                          "source": {
+                                            "type": "TEXT"
+                                          },
+                                          "value": "CIDR"
                                         }
                                       },
                                       "issuanceCriteria": {
@@ -1225,33 +1231,39 @@
                                   "id": "{{POL_CONTRACT_ID}}",
                                   "location": "{{PINGFED_BASE_URL}}/pf-admin-api/v1/authenticationPolicyContracts/{{POL_CONTRACT_ID}}"
                                 },
-                                  "attributeMapping": {
-                                    "attributeSources": [],
-                                    "attributeContractFulfillment": {
-                                      "mail": {
-                                        "source": {
-                                          "type": "ADAPTER",
-                                          "id": "{{P1_HTMLFORM_ID}}"
-                                        },
-                                        "value": "email"
+                                "attributeMapping": {
+                                  "attributeSources": [],
+                                  "attributeContractFulfillment": {
+                                    "mail": {
+                                      "source": {
+                                        "type": "ADAPTER",
+                                        "id": "{{P1_HTMLFORM_ID}}"
                                       },
-                                      "subject": {
-                                        "source": {
-                                          "type": "ADAPTER",
-                                          "id": "{{P1_HTMLFORM_ID}}"
-                                        },
-                                        "value": "username"
-                                      }
+                                      "value": "email"
                                     },
-                                    "issuanceCriteria": {
-                                      "conditionalCriteria": []
+                                    "subject": {
+                                      "source": {
+                                        "type": "ADAPTER",
+                                        "id": "{{P1_HTMLFORM_ID}}"
+                                      },
+                                      "value": "username"
+                                    },
+                                    "SAML_AUTHN_CTX": {
+                                      "source": {
+                                        "type": "TEXT"
+                                      },
+                                      "value": "CIDR"
                                     }
+                                  },
+                                  "issuanceCriteria": {
+                                    "conditionalCriteria": []
                                   }
                                 }
                               }
-                            ]
-                          }
-                        ]
+                            }
+                          ]
+                        }
+                      ]
                     },
                     {
                       "action": {
@@ -1267,7 +1279,7 @@
                         "attributeRules": {
                           "items": [
                             {
-                              "attributeName": "adapterPopu.id",
+                              "attributeName": "population.id",
                               "condition": "EQUALS_CASE_INSENSITIVE",
                               "expectedValue": "{{Contractors}}",
                               "result": "P1_CONTRACTORS_POP_ID"
@@ -1333,7 +1345,13 @@
                                         "type": "ADAPTER",
                                         "id": "{{P1_HTMLFORM_ID}}"
                                       },
-                                      "value": "subject"
+                                      "value": "username"
+                                    },
+                                    "SAML_AUTHN_CTX": {
+                                      "source": {
+                                        "type": "TEXT"
+                                      },
+                                      "value": "POPULATION"
                                     }
                                   },
                                   "issuanceCriteria": {
@@ -1368,6 +1386,12 @@
                                     "id": "{{P1_HTMLFORM_ID}}"
                                   },
                                   "value": "username"
+                                },
+                                "SAML_AUTHN_CTX": {
+                                  "source": {
+                                    "type": "TEXT"
+                                  },
+                                  "value": "POPULATION"
                                 }
                               },
                               "issuanceCriteria": {

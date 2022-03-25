@@ -127,6 +127,9 @@
         "extendedAttributes": [
           {
             "name": "mail"
+          },
+          {
+            "name": "SAML_AUTHN_CTX"
           }
           ]
       }
@@ -192,7 +195,8 @@
       "spBrowserSso": {
         "protocol": "SAML20",
         "enabledProfiles": [
-          "IDP_INITIATED_SSO"
+          "IDP_INITIATED_SSO",
+          "SP_INITIATED_SSO"
           ],
         "incomingBindings": [
           "POST",
